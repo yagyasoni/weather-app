@@ -25,9 +25,9 @@ export function createMap(container: string, style: string, attribution: string)
   })
   map.addControl(new AttributionControl({ compact: true, customAttribution: attribution }), 'top-right')
   map.addControl(new NavigationControl({ showCompass: false }), 'top-right')
-  // MapLibre opens the compact attribution on load; on small screens that covers the map,
-  // so start it collapsed there. The "i" button still reveals it.
-  if (window.matchMedia('(max-width: 720px)').matches) map.once('load', () => collapseAttribution(map))
+  // MapLibre opens the compact attribution on load, where it collides with the panels.
+  // Start it collapsed; the "i" button reveals the full text.
+  map.once('load', () => collapseAttribution(map))
   return map
 }
 

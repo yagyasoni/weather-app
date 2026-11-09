@@ -126,7 +126,11 @@ How it works:
 Layout is responsive and reflows live on resize, no reload needed:
 
 - Wide screens: header and location card stack in a left column; the map
-  controls sit top-right; the timeline spans the bottom.
+  controls sit top-right; the timeline spans the bottom. When the window is
+  too short for the stack but at least 760 px wide, the card moves into a
+  second column beside the header instead of scrolling.
+- The day labels under the slider measure themselves and hide whichever
+  would collide at the current width, so they never overlap.
 - Under 720 px: the header collapses to its title (tap to expand) when a
   location is selected, the location card becomes a bottom sheet above the
   timeline, the timeline wraps to two rows, and the map controls move above

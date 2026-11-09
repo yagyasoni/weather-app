@@ -5,7 +5,7 @@ import { FrameStore, loadLatest, type Loaded } from './data'
 import { lonLatToPixel } from './geo'
 import { buildLayers, type LayerDef } from './layers'
 import type { SeriesPoint } from './narrative'
-import { collapseAttribution, createMap, RainOverlay } from './overlay'
+import { createMap, RainOverlay } from './overlay'
 import { PointPanel } from './point'
 import { readState, writeState, type ViewState } from './state'
 import { Timeline } from './timeline'
@@ -197,10 +197,7 @@ async function main(): Promise<void> {
   renderLayerChips(layers, layer.id, selectLayer)
   overlay.onClick((lngLat) => void selectPoint(lngLat.lat, lngLat.lng))
   // crossing the breakpoint: collapse the header behind an open sheet, expand it on wide screens
-  narrowScreen.addEventListener('change', (e) => {
-    collapseHeader(e.matches && panel.visible)
-    if (e.matches) collapseAttribution(map)
-  })
+  narrowScreen.addEventListener('change', (e) => collapseHeader(e.matches && panel.visible))
 
   const first = state.step !== null ? Math.max(0, frames.findIndex((f) => f.step === state.step)) : startIndex(frames)
   await timeline.setIndex(first)

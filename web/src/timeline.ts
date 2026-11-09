@@ -26,6 +26,7 @@ export class Timeline {
   private validEl = el<HTMLDivElement>('valid-time')
   private leadEl = el<HTMLDivElement>('lead')
   private progressEl = el<HTMLDivElement>('progress')
+  private tickEls: HTMLSpanElement[] = []
 
   constructor(
     readonly frames: IntervalFrame[],
@@ -39,6 +40,7 @@ export class Timeline {
     this.playBtn.addEventListener('click', () => this.toggle())
     document.addEventListener('keydown', (e) => this.onKey(e))
     this.renderTicks()
+    new ResizeObserver(() => this.fitTicks()).observe(this.slider.parentElement!)
   }
 
   /** Render frame i, coalescing rapid requests so only the latest is drawn. */
@@ -157,6 +159,7 @@ export class Timeline {
   private renderTicks(): void {
     const ticks = el<HTMLDivElement>('ticks')
     ticks.replaceChildren()
+    this.tickEls = []
     let lastDay = ''
     const n = this.frames.length - 1
     this.frames.forEach((f, i) => {
@@ -167,9 +170,30 @@ export class Timeline {
       if (i === 0) return // the first frame's day is implied by the readout
       const tick = document.createElement('span')
       tick.className = 'tick'
+      tick.dataset.pos = String(i / n)
       tick.style.left = `${(i / n) * 100}%`
       tick.textContent = tickFmt.format(end)
       ticks.appendChild(tick)
+      this.tickEls.push(tick)
     })
+    this.fitTicks()
+  }
+
+  /** Hide labels that would collide at the current width; the first of each gap wins. */
+  private fitTicks(): void {
+    const ticks = el<HTMLDivElement>('ticks')
+    const width = ticks.clientWidth
+    if (!width || this.tickEls.length === 0) return
+    for (const tick of this.tickEls) tick.hidden = false
+    const labelW = Math.max(...this.tickEls.map((t) => t.offsetWidth)) + 10
+    let lastX = -Infinity
+    for (const tick of this.tickEls) {
+      const x = Number(tick.dataset.pos) * width
+      if (x - lastX >= labelW) {
+        lastX = x
+      } else {
+        tick.hidden = true
+      }
+    }
   }
 }
