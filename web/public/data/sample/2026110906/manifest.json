@@ -1,0 +1,563 @@
+{
+  "model": "aifs-single",
+  "source": "ecmwf",
+  "run": "2026-11-09T06:00:00Z",
+  "run_id": "2026110906",
+  "generated_at": "2026-11-09T14:57:02Z",
+  "parameter": {
+    "name": "tp",
+    "description": "Total precipitation",
+    "units": "mm",
+    "source_units": "kg m**-2"
+  },
+  "grid": {
+    "resolution_deg": 0.25
+  },
+  "image": {
+    "width": 1440,
+    "height": 1440,
+    "projection": "EPSG:3857",
+    "bounds": {
+      "west": -180.0,
+      "east": 180.0,
+      "north": 85.05112878,
+      "south": -85.05112878
+    }
+  },
+  "layers": {
+    "interval": {
+      "description": "Precipitation accumulated over the preceding interval",
+      "encoding": {
+        "type": "sqrt",
+        "vmax": 100.0,
+        "units": "mm",
+        "decode": "mm = (g / 255)^2 * vmax"
+      },
+      "frames": [
+        {
+          "step": 6,
+          "interval_hours": 6,
+          "valid_time": "2026-11-09T12:00:00Z",
+          "file": "tp_006.png",
+          "max_mm": 69.28
+        },
+        {
+          "step": 12,
+          "interval_hours": 6,
+          "valid_time": "2026-11-09T18:00:00Z",
+          "file": "tp_012.png",
+          "max_mm": 76.81
+        },
+        {
+          "step": 18,
+          "interval_hours": 6,
+          "valid_time": "2026-11-10T00:00:00Z",
+          "file": "tp_018.png",
+          "max_mm": 57.56
+        },
+        {
+          "step": 24,
+          "interval_hours": 6,
+          "valid_time": "2026-11-10T06:00:00Z",
+          "file": "tp_024.png",
+          "max_mm": 58.12
+        },
+        {
+          "step": 30,
+          "interval_hours": 6,
+          "valid_time": "2026-11-10T12:00:00Z",
+          "file": "tp_030.png",
+          "max_mm": 54.88
+        },
+        {
+          "step": 36,
+          "interval_hours": 6,
+          "valid_time": "2026-11-10T18:00:00Z",
+          "file": "tp_036.png",
+          "max_mm": 51.5
+        },
+        {
+          "step": 42,
+          "interval_hours": 6,
+          "valid_time": "2026-11-11T00:00:00Z",
+          "file": "tp_042.png",
+          "max_mm": 49.06
+        },
+        {
+          "step": 48,
+          "interval_hours": 6,
+          "valid_time": "2026-11-11T06:00:00Z",
+          "file": "tp_048.png",
+          "max_mm": 58.0
+        },
+        {
+          "step": 54,
+          "interval_hours": 6,
+          "valid_time": "2026-11-11T12:00:00Z",
+          "file": "tp_054.png",
+          "max_mm": 65.12
+        },
+        {
+          "step": 60,
+          "interval_hours": 6,
+          "valid_time": "2026-11-11T18:00:00Z",
+          "file": "tp_060.png",
+          "max_mm": 53.25
+        },
+        {
+          "step": 66,
+          "interval_hours": 6,
+          "valid_time": "2026-11-12T00:00:00Z",
+          "file": "tp_066.png",
+          "max_mm": 43.38
+        },
+        {
+          "step": 72,
+          "interval_hours": 6,
+          "valid_time": "2026-11-12T06:00:00Z",
+          "file": "tp_072.png",
+          "max_mm": 34.5
+        },
+        {
+          "step": 78,
+          "interval_hours": 6,
+          "valid_time": "2026-11-12T12:00:00Z",
+          "file": "tp_078.png",
+          "max_mm": 30.12
+        },
+        {
+          "step": 84,
+          "interval_hours": 6,
+          "valid_time": "2026-11-12T18:00:00Z",
+          "file": "tp_084.png",
+          "max_mm": 27.62
+        },
+        {
+          "step": 90,
+          "interval_hours": 6,
+          "valid_time": "2026-11-13T00:00:00Z",
+          "file": "tp_090.png",
+          "max_mm": 27.88
+        },
+        {
+          "step": 96,
+          "interval_hours": 6,
+          "valid_time": "2026-11-13T06:00:00Z",
+          "file": "tp_096.png",
+          "max_mm": 24.0
+        },
+        {
+          "step": 102,
+          "interval_hours": 6,
+          "valid_time": "2026-11-13T12:00:00Z",
+          "file": "tp_102.png",
+          "max_mm": 28.0
+        },
+        {
+          "step": 108,
+          "interval_hours": 6,
+          "valid_time": "2026-11-13T18:00:00Z",
+          "file": "tp_108.png",
+          "max_mm": 25.5
+        },
+        {
+          "step": 114,
+          "interval_hours": 6,
+          "valid_time": "2026-11-14T00:00:00Z",
+          "file": "tp_114.png",
+          "max_mm": 27.12
+        },
+        {
+          "step": 120,
+          "interval_hours": 6,
+          "valid_time": "2026-11-14T06:00:00Z",
+          "file": "tp_120.png",
+          "max_mm": 24.5
+        },
+        {
+          "step": 126,
+          "interval_hours": 6,
+          "valid_time": "2026-11-14T12:00:00Z",
+          "file": "tp_126.png",
+          "max_mm": 27.5
+        },
+        {
+          "step": 132,
+          "interval_hours": 6,
+          "valid_time": "2026-11-14T18:00:00Z",
+          "file": "tp_132.png",
+          "max_mm": 32.62
+        },
+        {
+          "step": 138,
+          "interval_hours": 6,
+          "valid_time": "2026-11-15T00:00:00Z",
+          "file": "tp_138.png",
+          "max_mm": 39.5
+        },
+        {
+          "step": 144,
+          "interval_hours": 6,
+          "valid_time": "2026-11-15T06:00:00Z",
+          "file": "tp_144.png",
+          "max_mm": 41.0
+        },
+        {
+          "step": 150,
+          "interval_hours": 6,
+          "valid_time": "2026-11-15T12:00:00Z",
+          "file": "tp_150.png",
+          "max_mm": 49.25
+        },
+        {
+          "step": 156,
+          "interval_hours": 6,
+          "valid_time": "2026-11-15T18:00:00Z",
+          "file": "tp_156.png",
+          "max_mm": 62.5
+        },
+        {
+          "step": 162,
+          "interval_hours": 6,
+          "valid_time": "2026-11-16T00:00:00Z",
+          "file": "tp_162.png",
+          "max_mm": 52.12
+        },
+        {
+          "step": 168,
+          "interval_hours": 6,
+          "valid_time": "2026-11-16T06:00:00Z",
+          "file": "tp_168.png",
+          "max_mm": 56.0
+        },
+        {
+          "step": 174,
+          "interval_hours": 6,
+          "valid_time": "2026-11-16T12:00:00Z",
+          "file": "tp_174.png",
+          "max_mm": 52.25
+        },
+        {
+          "step": 180,
+          "interval_hours": 6,
+          "valid_time": "2026-11-16T18:00:00Z",
+          "file": "tp_180.png",
+          "max_mm": 35.62
+        },
+        {
+          "step": 186,
+          "interval_hours": 6,
+          "valid_time": "2026-11-17T00:00:00Z",
+          "file": "tp_186.png",
+          "max_mm": 40.75
+        },
+        {
+          "step": 192,
+          "interval_hours": 6,
+          "valid_time": "2026-11-17T06:00:00Z",
+          "file": "tp_192.png",
+          "max_mm": 52.0
+        },
+        {
+          "step": 198,
+          "interval_hours": 6,
+          "valid_time": "2026-11-17T12:00:00Z",
+          "file": "tp_198.png",
+          "max_mm": 67.75
+        },
+        {
+          "step": 204,
+          "interval_hours": 6,
+          "valid_time": "2026-11-17T18:00:00Z",
+          "file": "tp_204.png",
+          "max_mm": 44.88
+        },
+        {
+          "step": 210,
+          "interval_hours": 6,
+          "valid_time": "2026-11-18T00:00:00Z",
+          "file": "tp_210.png",
+          "max_mm": 45.12
+        },
+        {
+          "step": 216,
+          "interval_hours": 6,
+          "valid_time": "2026-11-18T06:00:00Z",
+          "file": "tp_216.png",
+          "max_mm": 48.0
+        },
+        {
+          "step": 222,
+          "interval_hours": 6,
+          "valid_time": "2026-11-18T12:00:00Z",
+          "file": "tp_222.png",
+          "max_mm": 50.25
+        },
+        {
+          "step": 228,
+          "interval_hours": 6,
+          "valid_time": "2026-11-18T18:00:00Z",
+          "file": "tp_228.png",
+          "max_mm": 45.88
+        },
+        {
+          "step": 234,
+          "interval_hours": 6,
+          "valid_time": "2026-11-19T00:00:00Z",
+          "file": "tp_234.png",
+          "max_mm": 41.12
+        },
+        {
+          "step": 240,
+          "interval_hours": 6,
+          "valid_time": "2026-11-19T06:00:00Z",
+          "file": "tp_240.png",
+          "max_mm": 40.0
+        },
+        {
+          "step": 246,
+          "interval_hours": 6,
+          "valid_time": "2026-11-19T12:00:00Z",
+          "file": "tp_246.png",
+          "max_mm": 35.38
+        },
+        {
+          "step": 252,
+          "interval_hours": 6,
+          "valid_time": "2026-11-19T18:00:00Z",
+          "file": "tp_252.png",
+          "max_mm": 33.25
+        },
+        {
+          "step": 258,
+          "interval_hours": 6,
+          "valid_time": "2026-11-20T00:00:00Z",
+          "file": "tp_258.png",
+          "max_mm": 49.38
+        },
+        {
+          "step": 264,
+          "interval_hours": 6,
+          "valid_time": "2026-11-20T06:00:00Z",
+          "file": "tp_264.png",
+          "max_mm": 48.75
+        },
+        {
+          "step": 270,
+          "interval_hours": 6,
+          "valid_time": "2026-11-20T12:00:00Z",
+          "file": "tp_270.png",
+          "max_mm": 37.38
+        },
+        {
+          "step": 276,
+          "interval_hours": 6,
+          "valid_time": "2026-11-20T18:00:00Z",
+          "file": "tp_276.png",
+          "max_mm": 53.38
+        },
+        {
+          "step": 282,
+          "interval_hours": 6,
+          "valid_time": "2026-11-21T00:00:00Z",
+          "file": "tp_282.png",
+          "max_mm": 38.62
+        },
+        {
+          "step": 288,
+          "interval_hours": 6,
+          "valid_time": "2026-11-21T06:00:00Z",
+          "file": "tp_288.png",
+          "max_mm": 36.75
+        },
+        {
+          "step": 294,
+          "interval_hours": 6,
+          "valid_time": "2026-11-21T12:00:00Z",
+          "file": "tp_294.png",
+          "max_mm": 35.25
+        },
+        {
+          "step": 300,
+          "interval_hours": 6,
+          "valid_time": "2026-11-21T18:00:00Z",
+          "file": "tp_300.png",
+          "max_mm": 36.5
+        },
+        {
+          "step": 306,
+          "interval_hours": 6,
+          "valid_time": "2026-11-22T00:00:00Z",
+          "file": "tp_306.png",
+          "max_mm": 39.25
+        },
+        {
+          "step": 312,
+          "interval_hours": 6,
+          "valid_time": "2026-11-22T06:00:00Z",
+          "file": "tp_312.png",
+          "max_mm": 35.75
+        },
+        {
+          "step": 318,
+          "interval_hours": 6,
+          "valid_time": "2026-11-22T12:00:00Z",
+          "file": "tp_318.png",
+          "max_mm": 31.5
+        },
+        {
+          "step": 324,
+          "interval_hours": 6,
+          "valid_time": "2026-11-22T18:00:00Z",
+          "file": "tp_324.png",
+          "max_mm": 39.75
+        },
+        {
+          "step": 330,
+          "interval_hours": 6,
+          "valid_time": "2026-11-23T00:00:00Z",
+          "file": "tp_330.png",
+          "max_mm": 32.0
+        },
+        {
+          "step": 336,
+          "interval_hours": 6,
+          "valid_time": "2026-11-23T06:00:00Z",
+          "file": "tp_336.png",
+          "max_mm": 25.75
+        },
+        {
+          "step": 342,
+          "interval_hours": 6,
+          "valid_time": "2026-11-23T12:00:00Z",
+          "file": "tp_342.png",
+          "max_mm": 24.0
+        },
+        {
+          "step": 348,
+          "interval_hours": 6,
+          "valid_time": "2026-11-23T18:00:00Z",
+          "file": "tp_348.png",
+          "max_mm": 21.75
+        },
+        {
+          "step": 354,
+          "interval_hours": 6,
+          "valid_time": "2026-11-24T00:00:00Z",
+          "file": "tp_354.png",
+          "max_mm": 20.25
+        },
+        {
+          "step": 360,
+          "interval_hours": 6,
+          "valid_time": "2026-11-24T06:00:00Z",
+          "file": "tp_360.png",
+          "max_mm": 20.75
+        }
+      ]
+    },
+    "accumulation": {
+      "description": "Precipitation accumulated since the start of the forecast",
+      "encoding": {
+        "type": "sqrt",
+        "vmax": 500.0,
+        "units": "mm",
+        "decode": "mm = (g / 255)^2 * vmax"
+      },
+      "frames": [
+        {
+          "hours": 24,
+          "valid_time": "2026-11-10T06:00:00Z",
+          "file": "acc_024.png",
+          "max_mm": 151.25
+        },
+        {
+          "hours": 72,
+          "valid_time": "2026-11-12T06:00:00Z",
+          "file": "acc_072.png",
+          "max_mm": 293.88
+        },
+        {
+          "hours": 240,
+          "valid_time": "2026-11-19T06:00:00Z",
+          "file": "acc_240.png",
+          "max_mm": 502.25
+        }
+      ]
+    },
+    "first_rain": {
+      "description": "Index of the first interval with more than 1 mm; 0 means none within the forecast",
+      "encoding": {
+        "type": "index",
+        "threshold_mm": 1.0,
+        "none_value": 0,
+        "steps": [
+          6,
+          12,
+          18,
+          24,
+          30,
+          36,
+          42,
+          48,
+          54,
+          60,
+          66,
+          72,
+          78,
+          84,
+          90,
+          96,
+          102,
+          108,
+          114,
+          120,
+          126,
+          132,
+          138,
+          144,
+          150,
+          156,
+          162,
+          168,
+          174,
+          180,
+          186,
+          192,
+          198,
+          204,
+          210,
+          216,
+          222,
+          228,
+          234,
+          240,
+          246,
+          252,
+          258,
+          264,
+          270,
+          276,
+          282,
+          288,
+          294,
+          300,
+          306,
+          312,
+          318,
+          324,
+          330,
+          336,
+          342,
+          348,
+          354,
+          360
+        ],
+        "decode": "hours = steps[g - 1] when g > 0"
+      },
+      "file": "first_rain.png"
+    }
+  },
+  "attribution": "Forecast data: ECMWF Open Data, licensed CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/"
+}

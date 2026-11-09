@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Raw forecast downloads and GRIB index files
+*.grib2
+*.grib
+*.idx
+
+# Generated forecast assets (only the checked-in sample is tracked)
+web/public/data/*
+!web/public/data/.gitkeep
+!web/public/data/sample/
+
+# Node / build
+node_modules/
+web/dist/
+
+# OS
+.DS_Store
