@@ -1,0 +1,102 @@
+import { AttributionControl, Map as MapLibreMap, NavigationControl, setWorkerUrl } from 'maplibre-gl'
+import type { CanvasSource } from 'maplibre-gl'
+// MapLibre 6 ships its worker as a separate module and resolves it relative to its
+// own URL, which breaks under bundlers. Let Vite emit the file and point MapLibre at it.
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
+
+setWorkerUrl(workerUrl)
+
+export interface Bounds {
+  west: number
+  east: number
+  north: number
+  south: number
+}
+
+export function createMap(container: string, style: string, attribution: string): MapLibreMap {
+  const map = new MapLibreMap({
+    container,
+    style,
+    center: [15, 22],
+    zoom: 1.4,
+    minZoom: 0.8,
+    maxZoom: 9,
+    attributionControl: false,
+  })
+  map.addControl(new AttributionControl({ compact: true, customAttribution: attribution }), 'top-right')
+  map.addControl(new NavigationControl({ showCompass: false }), 'top-right')
+  return map
+}
+
+/**
+ * Draws one decoded frame onto a canvas through the colour lookup table and
+ * drapes that canvas over the map in Web Mercator, beneath the basemap labels.
+ */
+export class RainOverlay {
+  private canvas: HTMLCanvasElement
+  private ctx: CanvasRenderingContext2D
+  private image: ImageData
+  private added = false
+
+  constructor(
+    private map: MapLibreMap,
+    width: number,
+    height: number,
+    private bounds: Bounds,
+    private lut: Uint8ClampedArray,
+  ) {
+    this.canvas = document.createElement('canvas')
+    this.canvas.width = width
+    this.canvas.height = height
+    this.ctx = this.canvas.getContext('2d')!
+    this.image = this.ctx.createImageData(width, height)
+  }
+
+  add(): void {
+    const { west, east, north, south } = this.bounds
+    this.map.addSource('rain', {
+      type: 'canvas',
+      canvas: this.canvas,
+      animate: false,
+      coordinates: [[west, north], [east, north], [east, south], [west, south]],
+    })
+    const firstSymbol = this.map.getStyle().layers.find((l) => l.type === 'symbol')?.id
+    this.map.addLayer(
+      {
+        id: 'rain',
+        type: 'raster',
+        source: 'rain',
+        paint: { 'raster-opacity': 1, 'raster-fade-duration': 0, 'raster-resampling': 'linear' },
+      },
+      firstSymbol,
+    )
+    this.added = true
+  }
+
+  /** Colour a frame of grey levels and push it to the map. */
+  show(grey: Uint8Array): void {
+    const px = this.image.data
+    const lut = this.lut
+    for (let i = 0, j = 0; i < grey.length; i++, j += 4) {
+      const k = grey[i] * 4
+      px[j] = lut[k]
+      px[j + 1] = lut[k + 1]
+      px[j + 2] = lut[k + 2]
+      px[j + 3] = lut[k + 3]
+    }
+    this.ctx.putImageData(this.image, 0, 0)
+    this.refresh()
+  }
+
+  private refresh(): void {
+    if (!this.added) return
+    const src = this.map.getSource('rain') as CanvasSource | undefined
+    if (!src) return
+    // A non-animated canvas source uploads its texture once. play() marks it live and
+    // pause() re-reads the canvas synchronously before stopping, so the pair uploads
+    // the new frame without leaving a per-frame re-upload running.
+    src.play()
+    src.pause()
+    this.map.triggerRepaint()
+  }
+}

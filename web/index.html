@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="15-day precipitation forecast from ECMWF Open Data (AIFS), rendered on an interactive map." />
+    <title>Precipitation Forecast</title>
+  </head>
+  <body>
+    <div id="map" role="application" aria-label="Precipitation forecast map"></div>
+
+    <header class="panel brand">
+      <h1>Precipitation forecast</h1>
+      <p class="meta" id="run-info">Loading forecast…</p>
+      <p class="badge warn" id="stale" hidden></p>
+      <p class="badge info" id="fallback" hidden>Showing checked-in sample data</p>
+      <div class="legend" aria-label="Colour scale">
+        <div class="legend-title">Rain in 6 h, mm</div>
+        <div class="legend-bar" id="legend-bar"></div>
+        <div class="legend-labels" id="legend-labels"></div>
+      </div>
+    </header>
+
+    <footer class="panel timeline" aria-label="Forecast time">
+      <button id="play" class="icon-btn" aria-label="Play" aria-pressed="false">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path class="icon-play" d="M8 5v14l11-7z" fill="currentColor" />
+          <path class="icon-pause" d="M6 5h4v14H6zm8 0h4v14h-4z" fill="currentColor" />
+        </svg>
+      </button>
+      <div class="readout">
+        <div class="valid-time" id="valid-time">—</div>
+        <div class="lead" id="lead">—</div>
+      </div>
+      <div class="slider-wrap">
+        <input id="slider" type="range" min="0" max="0" value="0" step="1" aria-label="Forecast step" />
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+      </div>
+      <div class="progress" id="progress" aria-live="polite"></div>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -83,6 +83,43 @@ web/public/data/
 front end can be developed offline. Everything else under `web/public/data/`
 is generated and ignored by git.
 
+## Web app
+
+Static Vite + TypeScript site using MapLibre GL JS. No framework, no server.
+
+```bash
+cd web
+npm install
+npm run dev        # http://127.0.0.1:5173/weather-app/  (reads data/sample)
+npm run build      # type-checks, then bundles into web/dist
+npm run preview    # serves the production build at /weather-app/
+```
+
+How it works:
+
+- `src/data.ts` loads `latest.json` and the manifest, then downloads frame
+  PNGs a few at a time, nearest to the current frame first. Frames are decoded
+  on demand into one byte per pixel and kept in a small LRU; the compressed
+  blobs for all 60 frames are about 16 MB.
+- `src/colormap.ts` turns grey levels into colours with a single-hue blue ramp
+  on a square-root scale, transparent below 0.2 mm. The same ramp draws the
+  legend, so the legend is correct by construction.
+- `src/overlay.ts` paints a frame through the colour lookup table onto a
+  canvas and drapes it over the map as a MapLibre canvas source in Web
+  Mercator, inserted beneath the basemap's label layers.
+- `src/timeline.ts` is the slider, play/pause, keyboard shortcuts (space,
+  arrows, home, end), the time readout in the viewer's time zone and the
+  day ticks.
+
+The dev server reads the checked-in sample run. The production build reads
+`data/latest.json`, which the pipeline writes in CI, and falls back to the
+sample with a visible badge if that file is missing. The site is built for
+the `/weather-app/` path used by GitHub Pages; set `BASE_PATH=/` to build for
+a host that serves it at the root.
+
+Basemap: Carto Dark Matter vector tiles (no API key). Data attribution to
+ECMWF is shown in the map's attribution control as the licence requires.
+
 ## Tests
 
 ```bash
@@ -113,6 +150,6 @@ Three tiers:
 ## Status
 
 - [x] Day 1: pipeline runs end to end and writes a valid run folder
-- [ ] Day 2: map, overlay, time slider and playback
+- [x] Day 2: map, overlay, time slider and playback
 - [ ] Day 3: point query, layers, legend, mobile layout
 - [ ] Day 4: CI workflow, GitHub Pages deployment

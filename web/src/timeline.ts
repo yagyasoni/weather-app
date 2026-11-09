@@ -1,0 +1,147 @@
+import { PLAYBACK_MS } from './config'
+import type { IntervalFrame } from './types'
+
+const dayFmt = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+const timeFmt = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
+const tickFmt = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric' })
+
+function el<T extends HTMLElement>(id: string): T {
+  const node = document.getElementById(id)
+  if (!node) throw new Error(`missing #${id}`)
+  return node as T
+}
+
+/** Slider, play button, time readout and day ticks. Calls `show(i)` to render a frame. */
+export class Timeline {
+  index = 0
+  playing = false
+  private timer: number | undefined
+  private rendering: Promise<void> = Promise.resolve()
+  private slider = el<HTMLInputElement>('slider')
+  private playBtn = el<HTMLButtonElement>('play')
+  private validEl = el<HTMLDivElement>('valid-time')
+  private leadEl = el<HTMLDivElement>('lead')
+  private progressEl = el<HTMLDivElement>('progress')
+
+  constructor(
+    private frames: IntervalFrame[],
+    private show: (index: number) => Promise<void>,
+  ) {
+    this.slider.max = String(frames.length - 1)
+    this.slider.addEventListener('input', () => {
+      this.pause()
+      void this.setIndex(Number(this.slider.value))
+    })
+    this.playBtn.addEventListener('click', () => this.toggle())
+    document.addEventListener('keydown', (e) => this.onKey(e))
+    this.renderTicks()
+  }
+
+  /** Render frame i, coalescing rapid requests so only the latest is drawn. */
+  setIndex(i: number): Promise<void> {
+    const clamped = Math.min(Math.max(i, 0), this.frames.length - 1)
+    this.index = clamped
+    this.slider.value = String(clamped)
+    this.renderReadout()
+    this.rendering = this.rendering.then(async () => {
+      if (this.index !== clamped) return // superseded
+      await this.show(clamped)
+    })
+    return this.rendering
+  }
+
+  play(): void {
+    if (this.playing) return
+    this.playing = true
+    this.playBtn.classList.add('playing')
+    this.playBtn.setAttribute('aria-pressed', 'true')
+    this.playBtn.setAttribute('aria-label', 'Pause')
+    const tick = async () => {
+      if (!this.playing) return
+      await this.setIndex((this.index + 1) % this.frames.length)
+      if (this.playing) this.timer = window.setTimeout(tick, PLAYBACK_MS)
+    }
+    this.timer = window.setTimeout(tick, PLAYBACK_MS)
+  }
+
+  pause(): void {
+    if (!this.playing) return
+    this.playing = false
+    window.clearTimeout(this.timer)
+    this.playBtn.classList.remove('playing')
+    this.playBtn.setAttribute('aria-pressed', 'false')
+    this.playBtn.setAttribute('aria-label', 'Play')
+  }
+
+  toggle(): void {
+    this.playing ? this.pause() : this.play()
+  }
+
+  setProgress(loaded: number, total: number): void {
+    if (loaded >= total) {
+      this.progressEl.textContent = ''
+      this.progressEl.hidden = true
+    } else {
+      this.progressEl.hidden = false
+      this.progressEl.textContent = `Loading ${loaded}/${total}`
+    }
+  }
+
+  private onKey(e: KeyboardEvent): void {
+    const target = e.target as HTMLElement | null
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
+    switch (e.key) {
+      case ' ':
+        e.preventDefault()
+        this.toggle()
+        break
+      case 'ArrowRight':
+        this.pause()
+        void this.setIndex(this.index + 1)
+        break
+      case 'ArrowLeft':
+        this.pause()
+        void this.setIndex(this.index - 1)
+        break
+      case 'Home':
+        this.pause()
+        void this.setIndex(0)
+        break
+      case 'End':
+        this.pause()
+        void this.setIndex(this.frames.length - 1)
+        break
+    }
+  }
+
+  private renderReadout(): void {
+    const f = this.frames[this.index]
+    const end = new Date(f.valid_time)
+    const start = new Date(end.getTime() - f.interval_hours * 3600_000)
+    const sameDay = start.toDateString() === end.toDateString()
+    this.validEl.textContent = sameDay
+      ? `${dayFmt.format(start)} · ${timeFmt.format(start)} – ${timeFmt.format(end)}`
+      : `${dayFmt.format(start)} ${timeFmt.format(start)} – ${dayFmt.format(end)} ${timeFmt.format(end)}`
+    this.leadEl.textContent = `Forecast hour +${f.step}`
+  }
+
+  /** One label per local calendar day, placed at the first frame ending on that day. */
+  private renderTicks(): void {
+    const ticks = el<HTMLDivElement>('ticks')
+    ticks.replaceChildren()
+    let lastDay = ''
+    const n = this.frames.length - 1
+    this.frames.forEach((f, i) => {
+      const end = new Date(f.valid_time)
+      const day = end.toDateString()
+      if (day === lastDay) return
+      lastDay = day
+      if (i === 0) return // the first frame's day is implied by the readout
+      const tick = document.createElement('span')
+      tick.className = 'tick'
+      tick.style.left = `${(i / n) * 100}%`
+      tick.textContent = tickFmt.format(end)
+      ticks.appendChild(tick)
+    })
+  }
+}
