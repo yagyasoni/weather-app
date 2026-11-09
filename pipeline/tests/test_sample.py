@@ -10,6 +10,9 @@ import numpy as np
 import build
 from helpers import decode, load_gray, quant_tolerance
 
+N_PIXELS = 3000
+SEED = 1   # fixed seed: the same random pixels are checked on every run
+
 
 def parse(ts: str) -> datetime:
     return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
@@ -94,9 +97,9 @@ def test_first_rain_layer_agrees_with_interval_frames(sample):
     first = load_gray(run_dir / m["layers"]["first_rain"]["file"])
     assert first.max() <= len(frames)
 
-    rng = np.random.default_rng(1)
-    ys = rng.integers(0, first.shape[0], 3000)
-    xs = rng.integers(0, first.shape[1], 3000)
+    rng = np.random.default_rng(SEED)
+    ys = rng.integers(0, first.shape[0], N_PIXELS)
+    xs = rng.integers(0, first.shape[1], N_PIXELS)
     idx = first[ys, xs].astype(int)
     stack = np.stack([decode(load_gray(run_dir / f["file"])[ys, xs], vmax) for f in frames])
 

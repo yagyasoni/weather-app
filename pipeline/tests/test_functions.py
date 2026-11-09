@@ -10,6 +10,7 @@ from helpers import decode, lonlat_to_pixel, quant_tolerance
 
 LAT_SRC = np.arange(90.0, -90.01, -0.25)   # 721 rows, north to south, as cfgrib delivers
 LON_SRC = np.arange(-180.0, 180.0, 0.25)   # 1440 columns
+SEED = 0   # fixed seed: the same random values are tested on every run
 
 
 def test_row_latitudes_span_mercator_limits_and_decrease():
@@ -52,7 +53,7 @@ def test_warp_applies_lookup_tables():
 
 
 def test_encode_sqrt_roundtrip_within_quantisation():
-    rng = np.random.default_rng(0)
+    rng = np.random.default_rng(SEED)
     vmax = build.VMAX_INTERVAL_MM
     mm = rng.uniform(0.0, vmax, 10_000)
     back = decode(build.encode_sqrt(mm, vmax), vmax)

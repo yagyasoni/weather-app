@@ -14,6 +14,8 @@ from helpers import decode, load_gray, lonlat_to_pixel, quant_tolerance
 
 pytestmark = pytest.mark.live
 N_STEPS = 4
+N_PIXELS = 400
+SEED = 2   # fixed seed: the same random pixels are checked on every run
 
 
 @pytest.fixture(scope="module")
@@ -45,8 +47,8 @@ def test_pngs_reproduce_grib_values(fresh_build):
     assert len(frames) == N_STEPS
 
     row_lat = build.mercator_row_latitudes(build.HEIGHT)
-    rng = np.random.default_rng(2)
-    pts = list(zip(rng.uniform(-84, 84, 400), rng.uniform(-180, 180, 400)))
+    rng = np.random.default_rng(SEED)
+    pts = list(zip(rng.uniform(-84, 84, N_PIXELS), rng.uniform(-180, 180, N_PIXELS)))
     worst = 0.0
     for k, f in enumerate(frames):
         png = load_gray(run_dir / f["file"])
