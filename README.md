@@ -83,6 +83,33 @@ web/public/data/
 front end can be developed offline. Everything else under `web/public/data/`
 is generated and ignored by git.
 
+## Tests
+
+```bash
+.venv/bin/pip install -r pipeline/requirements-dev.txt
+.venv/bin/pytest              # offline, about a second
+.venv/bin/pytest --live -s    # also hits ECMWF and Open-Meteo, about a minute
+```
+
+Three tiers:
+
+- `pipeline/tests/test_functions.py` — unit tests for the pure functions:
+  Mercator row latitudes, warp lookup tables (including the dateline and a
+  0..360 longitude grid), the square-root encoding round trip, unit
+  handling, and run pruning. It also checks that the pixel formula the
+  front end uses lands on the row the pipeline wrote.
+- `pipeline/tests/test_sample.py` — contract checks on the checked-in sample
+  run: manifest fields, 60 frames in order with correct valid times, every
+  PNG 8-bit grayscale at the declared size, decoded maxima matching the
+  manifest, no saturation, plausible global mean (catches unit mistakes),
+  accumulations growing with lead time, and the first-rain layer agreeing
+  with the interval frames.
+- `pipeline/tests/test_live.py` — marked `live`, skipped by default. Builds
+  a fresh 4-step run into a temp folder, then checks 1600 random pixels
+  against the source GRIB within the encoding's quantisation error, and
+  compares 6-hourly totals at the wettest mid-latitude point against
+  Open-Meteo's feed of the same AIFS run.
+
 ## Status
 
 - [x] Day 1: pipeline runs end to end and writes a valid run folder

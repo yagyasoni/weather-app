@@ -3,7 +3,7 @@
   "source": "ecmwf",
   "run": "2026-11-09T06:00:00Z",
   "run_id": "2026110906",
-  "generated_at": "2026-11-09T14:57:02Z",
+  "generated_at": "2026-11-09T15:18:35Z",
   "parameter": {
     "name": "tp",
     "description": "Total precipitation",

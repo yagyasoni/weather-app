@@ -120,7 +120,10 @@ def build_warp_indices(lat_src: np.ndarray, lon_src: np.ndarray, width: int, hei
     """Nearest-neighbour lookup tables from the lat/lon grid into a Mercator image."""
     lat_tgt = mercator_row_latitudes(height)
     rows = np.abs(lat_src[None, :] - lat_tgt[:, None]).argmin(axis=1)
-    lon_tgt = -180.0 + (np.arange(width) + 0.5) * 360.0 / width
+    # Sample columns at their west edge so pixel j coincides with source column j at
+    # native width. This matches the front end's x = floor((lon + 180) / 360 * width)
+    # and avoids ties when pixel centres fall exactly between two grid columns.
+    lon_tgt = -180.0 + np.arange(width) * 360.0 / width
     dlon = np.abs(((lon_src[None, :] - lon_tgt[:, None] + 180.0) % 360.0) - 180.0)
     cols = dlon.argmin(axis=1)
     return rows, cols
