@@ -15,8 +15,12 @@ function el<T extends HTMLElement>(id: string): T {
 export class Timeline {
   index = 0
   playing = false
+  /** Called whenever the index changes, before the frame is rendered. */
+  onChange: ((index: number) => void) | null = null
+  private mode: 'animated' | 'static' = 'animated'
   private timer: number | undefined
   private rendering: Promise<void> = Promise.resolve()
+  private panel = document.querySelector<HTMLElement>('.timeline')!
   private slider = el<HTMLInputElement>('slider')
   private playBtn = el<HTMLButtonElement>('play')
   private validEl = el<HTMLDivElement>('valid-time')
@@ -24,7 +28,7 @@ export class Timeline {
   private progressEl = el<HTMLDivElement>('progress')
 
   constructor(
-    private frames: IntervalFrame[],
+    readonly frames: IntervalFrame[],
     private show: (index: number) => Promise<void>,
   ) {
     this.slider.max = String(frames.length - 1)
@@ -42,6 +46,8 @@ export class Timeline {
     const clamped = Math.min(Math.max(i, 0), this.frames.length - 1)
     this.index = clamped
     this.slider.value = String(clamped)
+    this.onChange?.(clamped)
+    if (this.mode === 'static') return this.rendering
     this.renderReadout()
     this.rendering = this.rendering.then(async () => {
       if (this.index !== clamped) return // superseded
@@ -50,8 +56,29 @@ export class Timeline {
     return this.rendering
   }
 
+  /** Static layers freeze the timeline and replace the readout with the layer's own text. */
+  setMode(mode: 'animated' | 'static', readout?: { title: string; sub: string }): void {
+    this.mode = mode
+    if (mode === 'static') {
+      this.pause()
+      this.slider.disabled = true
+      this.playBtn.disabled = true
+      this.panel.classList.add('static')
+      if (readout) {
+        this.validEl.textContent = readout.title
+        this.leadEl.textContent = readout.sub
+      }
+    } else {
+      this.slider.disabled = false
+      this.playBtn.disabled = false
+      this.panel.classList.remove('static')
+      this.renderReadout()
+      void this.setIndex(this.index)
+    }
+  }
+
   play(): void {
-    if (this.playing) return
+    if (this.playing || this.mode === 'static') return
     this.playing = true
     this.playBtn.classList.add('playing')
     this.playBtn.setAttribute('aria-pressed', 'true')
@@ -89,7 +116,8 @@ export class Timeline {
 
   private onKey(e: KeyboardEvent): void {
     const target = e.target as HTMLElement | null
-    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return
+    if (this.mode === 'static') return
     switch (e.key) {
       case ' ':
         e.preventDefault()

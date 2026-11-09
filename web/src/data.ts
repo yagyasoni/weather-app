@@ -1,6 +1,5 @@
 import { DATA_ROOT, DECODE_CACHE, FALLBACK_DATA_ROOT, PRELOAD_CONCURRENCY } from './config'
-import type { IntervalFrame, Latest, Manifest } from './types'
-import { encodeGrey } from './types'
+import type { Latest, Manifest } from './types'
 
 export interface Loaded {
   root: string
@@ -59,121 +58,146 @@ class Lru<K, V> {
   }
 }
 
-let scratch: OffscreenCanvas | HTMLCanvasElement | null = null
+type Ctx2d = OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D
 
-/** Decode a grayscale PNG blob into one byte per pixel. */
-async function decodeGrey(blob: Blob, width: number, height: number): Promise<Uint8Array> {
-  const bitmap = await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' })
-  if (!scratch) {
-    scratch = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(width, height) : document.createElement('canvas')
-    scratch.width = width
-    scratch.height = height
+function makeCanvas(width: number, height: number): Ctx2d {
+  const canvas = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(width, height) : document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d', { willReadFrequently: true }) as Ctx2d
+  ctx.imageSmoothingEnabled = false
+  return ctx
+}
+
+const BITMAP_OPTS: ImageBitmapOptions = { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }
+
+/** Run `fn` over items with at most `limit` in flight, preserving order. */
+export async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>): Promise<R[]> {
+  const out = new Array<R>(items.length)
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++
+      out[i] = await fn(items[i], i)
+    }
   }
-  const ctx = scratch.getContext('2d', { willReadFrequently: true }) as
-    | OffscreenCanvasRenderingContext2D
-    | CanvasRenderingContext2D
-  ctx.drawImage(bitmap, 0, 0)
-  bitmap.close()
-  const { data } = ctx.getImageData(0, 0, width, height)
-  const out = new Uint8Array(width * height)
-  for (let i = 0, j = 0; i < out.length; i++, j += 4) out[i] = data[j]
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
   return out
 }
 
 /**
- * Downloads frame PNGs and decodes them on demand. Compressed blobs for every
- * frame are kept (about 250 KB each); decoded frames live in a small LRU.
+ * Downloads the run's PNGs and decodes them on demand. Compressed blobs are kept
+ * for every file requested (about 250 KB each); decoded frames live in a small LRU.
  */
 export class FrameStore {
-  private blobs = new Map<number, Promise<Blob>>()
-  private decoded = new Lru<number, Uint8Array>(DECODE_CACHE)
-  private inflight = new Map<number, Promise<Uint8Array>>()
+  private blobs = new Map<string, Promise<Blob>>()
+  private decoded = new Lru<string, Uint8Array>(DECODE_CACHE)
+  private inflight = new Map<string, Promise<Uint8Array>>()
+  private full: Ctx2d | null = null
+  private pixel: Ctx2d | null = null
   private loadedCount = 0
+  private preloadTotal = 0
   onProgress: ((loaded: number, total: number) => void) | null = null
+  /** Optional dev self-check: expected maximum grey level per file. */
+  expectedMax = new Map<string, number>()
 
   constructor(
     private baseUrl: string,
-    readonly frames: IntervalFrame[],
-    private width: number,
-    private height: number,
-    private vmax: number,
+    readonly width: number,
+    readonly height: number,
   ) {}
 
-  get length(): number {
-    return this.frames.length
-  }
-
-  private blob(i: number): Promise<Blob> {
-    let p = this.blobs.get(i)
+  private blob(file: string): Promise<Blob> {
+    let p = this.blobs.get(file)
     if (!p) {
-      p = fetch(`${this.baseUrl}/${this.frames[i].file}`)
+      p = fetch(`${this.baseUrl}/${file}`)
         .then((res) => {
-          if (!res.ok) throw new Error(`${res.status} fetching ${this.frames[i].file}`)
+          if (!res.ok) throw new Error(`${res.status} fetching ${file}`)
           return res.blob()
         })
         .then((b) => {
           this.loadedCount++
-          this.onProgress?.(this.loadedCount, this.frames.length)
+          this.onProgress?.(this.loadedCount, this.preloadTotal)
           return b
         })
-      p.catch(() => this.blobs.delete(i)) // allow a retry after a network error
-      this.blobs.set(i, p)
+      p.catch(() => this.blobs.delete(file)) // allow a retry after a network error
+      this.blobs.set(file, p)
     }
     return p
   }
 
-  /** Decoded grey levels for frame i, row-major, width*height bytes. */
-  grey(i: number): Promise<Uint8Array> {
-    const cached = this.decoded.get(i)
+  /** Decoded grey levels for a file, row-major, width*height bytes. */
+  grey(file: string): Promise<Uint8Array> {
+    const cached = this.decoded.get(file)
     if (cached) return Promise.resolve(cached)
-    let p = this.inflight.get(i)
+    let p = this.inflight.get(file)
     if (!p) {
-      p = this.blob(i)
-        .then((b) => decodeGrey(b, this.width, this.height))
-        .then((g) => {
-          this.decoded.set(i, g)
-          this.inflight.delete(i)
-          if (import.meta.env.DEV) this.selfCheck(i, g)
-          return g
+      p = this.blob(file)
+        .then((b) => createImageBitmap(b, BITMAP_OPTS))
+        .then((bitmap) => {
+          this.full ??= makeCanvas(this.width, this.height)
+          this.full.drawImage(bitmap, 0, 0)
+          bitmap.close()
+          const { data } = this.full.getImageData(0, 0, this.width, this.height)
+          const out = new Uint8Array(this.width * this.height)
+          for (let i = 0, j = 0; i < out.length; i++, j += 4) out[i] = data[j]
+          this.decoded.set(file, out)
+          this.inflight.delete(file)
+          if (import.meta.env.DEV) this.selfCheck(file, out)
+          return out
         })
-      this.inflight.set(i, p)
+      this.inflight.set(file, p)
     }
     return p
   }
 
-  isReady(i: number): boolean {
-    return this.decoded.get(i) !== undefined
+  /** One pixel's grey level, without materialising the whole frame when it is not cached. */
+  async greyAt(file: string, x: number, y: number): Promise<number> {
+    const cached = this.decoded.get(file)
+    if (cached) return cached[y * this.width + x]
+    const inflight = this.inflight.get(file)
+    if (inflight) return (await inflight)[y * this.width + x]
+    const bitmap = await createImageBitmap(await this.blob(file), BITMAP_OPTS)
+    this.pixel ??= makeCanvas(1, 1)
+    this.pixel.clearRect(0, 0, 1, 1)
+    this.pixel.drawImage(bitmap, x, y, 1, 1, 0, 0, 1, 1)
+    bitmap.close()
+    return this.pixel.getImageData(0, 0, 1, 1).data[0]
   }
 
-  /** Fetch every frame's PNG in the background, a few at a time, nearest to `from` first. */
-  preloadAll(from = 0): void {
-    const order: number[] = []
-    for (let d = 0; order.length < this.frames.length; d++) {
-      if (from + d < this.frames.length) order.push(from + d)
-      if (d > 0 && from - d >= 0) order.push(from - d)
+  /** The same pixel across many files, a few decodes at a time. */
+  seriesAt(files: string[], x: number, y: number): Promise<number[]> {
+    return mapLimit(files, 6, (f) => this.greyAt(f, x, y))
+  }
+
+  /** Fetch files in the background, a few at a time, nearest to index `from` first. */
+  preload(files: string[], from = 0): void {
+    this.preloadTotal = files.length
+    const order: string[] = []
+    for (let d = 0; order.length < files.length; d++) {
+      if (from + d < files.length) order.push(files[from + d])
+      if (d > 0 && from - d >= 0) order.push(files[from - d])
     }
     let next = 0
     const worker = async () => {
       while (next < order.length) {
-        const i = order[next++]
         try {
-          await this.blob(i)
+          await this.blob(order[next++])
         } catch {
-          /* reported via console by blob(); the frame is retried when shown */
+          /* already logged by fetch; retried when the frame is shown */
         }
       }
     }
     for (let k = 0; k < PRELOAD_CONCURRENCY; k++) void worker()
   }
 
-  /** Dev-only: the decoded maximum must match the manifest's max_mm after encoding. */
-  private selfCheck(i: number, g: Uint8Array): void {
+  private selfCheck(file: string, g: Uint8Array): void {
+    const expected = this.expectedMax.get(file)
+    if (expected === undefined) return
     let max = 0
     for (let k = 0; k < g.length; k++) if (g[k] > max) max = g[k]
-    const expected = encodeGrey(this.frames[i].max_mm, this.vmax)
     if (Math.abs(max - expected) > 1) {
-      console.warn(`frame ${this.frames[i].file}: decoded max grey ${max}, manifest implies ${expected}. ` +
-        'The browser may be colour-managing the PNG.')
+      console.warn(`${file}: decoded max grey ${max}, manifest implies ${expected}. The browser may be colour-managing the PNG.`)
     }
   }
 }

@@ -1,5 +1,5 @@
-import { AttributionControl, Map as MapLibreMap, NavigationControl, setWorkerUrl } from 'maplibre-gl'
-import type { CanvasSource } from 'maplibre-gl'
+import { AttributionControl, Map as MapLibreMap, Marker, NavigationControl, setWorkerUrl } from 'maplibre-gl'
+import type { CanvasSource, LngLat } from 'maplibre-gl'
 // MapLibre 6 ships its worker as a separate module and resolves it relative to its
 // own URL, which breaks under bundlers. Let Vite emit the file and point MapLibre at it.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
@@ -25,18 +25,29 @@ export function createMap(container: string, style: string, attribution: string)
   })
   map.addControl(new AttributionControl({ compact: true, customAttribution: attribution }), 'top-right')
   map.addControl(new NavigationControl({ showCompass: false }), 'top-right')
+  // MapLibre opens the compact attribution on load; on small screens that covers the map,
+  // so start it collapsed there. The "i" button still reveals it.
+  if (window.matchMedia('(max-width: 720px)').matches) map.once('load', () => collapseAttribution(map))
   return map
 }
 
+/** Fold the compact attribution control if it is currently expanded. */
+export function collapseAttribution(map: MapLibreMap): void {
+  const attrib = map.getContainer().querySelector<HTMLElement>('.maplibregl-ctrl-attrib.maplibregl-compact-show')
+  attrib?.querySelector<HTMLButtonElement>('.maplibregl-ctrl-attrib-button')?.click()
+}
+
 /**
- * Draws one decoded frame onto a canvas through the colour lookup table and
- * drapes that canvas over the map in Web Mercator, beneath the basemap labels.
+ * Draws one decoded frame onto a canvas through the current colour lookup table
+ * and drapes that canvas over the map in Web Mercator, beneath the basemap labels.
  */
 export class RainOverlay {
   private canvas: HTMLCanvasElement
   private ctx: CanvasRenderingContext2D
   private image: ImageData
   private added = false
+  private lastGrey: Uint8Array | null = null
+  private marker: Marker | null = null
 
   constructor(
     private map: MapLibreMap,
@@ -73,8 +84,15 @@ export class RainOverlay {
     this.added = true
   }
 
+  /** Swap the colour table (layer change) and repaint the current frame with it. */
+  setLut(lut: Uint8ClampedArray): void {
+    this.lut = lut
+    if (this.lastGrey) this.show(this.lastGrey)
+  }
+
   /** Colour a frame of grey levels and push it to the map. */
   show(grey: Uint8Array): void {
+    this.lastGrey = grey
     const px = this.image.data
     const lut = this.lut
     for (let i = 0, j = 0; i < grey.length; i++, j += 4) {
@@ -86,6 +104,24 @@ export class RainOverlay {
     }
     this.ctx.putImageData(this.image, 0, 0)
     this.refresh()
+  }
+
+  onClick(handler: (lngLat: LngLat) => void): void {
+    this.map.on('click', (e) => handler(e.lngLat))
+  }
+
+  setMarker(lon: number, lat: number): void {
+    if (!this.marker) {
+      const el = document.createElement('div')
+      el.className = 'point-marker'
+      el.setAttribute('aria-hidden', 'true')
+      this.marker = new Marker({ element: el, anchor: 'center' })
+    }
+    this.marker.setLngLat([lon, lat]).addTo(this.map)
+  }
+
+  clearMarker(): void {
+    this.marker?.remove()
   }
 
   private refresh(): void {

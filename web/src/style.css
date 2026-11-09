@@ -1,18 +1,24 @@
 :root {
   color-scheme: dark;
-  --panel-bg: rgba(14, 16, 20, 0.78);
+  --panel-bg: rgba(14, 16, 20, 0.8);
   --panel-border: rgba(255, 255, 255, 0.08);
+  --surface-2: rgba(255, 255, 255, 0.05);
   --text-primary: #f0efec;
   --text-secondary: #c3c2b7;
   --text-muted: #8d8c85;
   --accent: #3987e5;
   --accent-strong: #86b6ef;
+  --accent-pale: #cde2fb;
   --warning: #fab219;
-  --info: #5598e7;
   --error: #e66767;
   --radius: 12px;
   --gutter: 16px;
+  --panel-w: min(340px, calc(100vw - 2 * var(--gutter)));
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* set from JS by ResizeObservers */
+  --header-h: 220px;
+  --timeline-h: 110px;
+  --point-h: 0px;
 }
 
 * { box-sizing: border-box; }
@@ -41,21 +47,37 @@ html, body {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
 }
 
-/* Header: title, run info, legend */
+[hidden] { display: none !important; }
+
+/* ---------- Header: title, run info, layers, legend ---------- */
 .brand {
   top: var(--gutter);
   left: var(--gutter);
-  width: min(340px, calc(100vw - 2 * var(--gutter)));
-  padding: 14px 16px 12px;
+  width: var(--panel-w);
+  padding: 12px 16px 12px;
+}
+.brand-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
 }
 .brand h1 {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 17px;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
+.brand .chevron { display: none; color: var(--text-secondary); transition: transform 0.2s; }
 .brand .meta {
-  margin: 0;
+  margin: 4px 0 0;
   color: var(--text-secondary);
   font-size: 12px;
 }
@@ -71,6 +93,41 @@ html, body {
 }
 .badge.warn { background: rgba(250, 178, 25, 0.16); color: var(--warning); }
 .badge.info { background: rgba(85, 152, 231, 0.16); color: var(--accent-strong); }
+
+.layers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.chip { position: relative; }
+.chip input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+.chip span {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, color 0.15s;
+}
+.chip span:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.09); }
+.chip input:checked + span {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+.chip input:focus-visible + span { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
 
 .legend { margin-top: 12px; }
 .legend-title {
@@ -95,11 +152,121 @@ html, body {
   position: absolute;
   transform: translateX(-50%);
   top: 0;
+  white-space: nowrap;
 }
 .legend-labels span:first-child { transform: translateX(0); }
 .legend-labels span:last-child { transform: translateX(-100%); }
 
-/* Timeline */
+.hint {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* ---------- Point panel: desktop card under the header ---------- */
+.point {
+  top: calc(var(--header-h) + 2 * var(--gutter));
+  left: var(--gutter);
+  width: var(--panel-w);
+  max-height: calc(100vh - var(--header-h) - var(--timeline-h) - 4 * var(--gutter));
+  overflow: auto;
+  padding: 12px 16px 12px;
+}
+.point-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.point-title {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.point-sub {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.close-btn {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  margin: -4px -8px 0 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.close-btn:hover { background: var(--surface-2); color: var(--text-primary); }
+.close-btn:focus-visible { outline: 2px solid var(--accent-strong); }
+
+.summary {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.stat {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.stat-label { font-size: 11px; color: var(--text-secondary); }
+
+.chart-wrap { position: relative; margin-top: 12px; }
+.chart { width: 100%; min-height: 124px; }
+.bar-chart { display: block; overflow: visible; }
+.bar { fill: var(--accent); }
+.bar.past { fill-opacity: 0.35; }
+.bar.hover { fill: var(--accent-strong); }
+.bar.current { fill: var(--accent-pale); }
+.grid { stroke: rgba(255, 255, 255, 0.08); }
+.axis { stroke: rgba(255, 255, 255, 0.28); }
+.axis-label { fill: var(--text-muted); font-size: 10px; }
+.tooltip {
+  position: absolute;
+  z-index: 2;
+  transform: translateY(-100%);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: #1a1d23;
+  font-size: 11.5px;
+  white-space: nowrap;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.chart-hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.point-marker {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-pale);
+  border: 2px solid #0b0d10;
+  box-shadow: 0 0 0 2px var(--accent-strong), 0 0 12px rgba(134, 182, 239, 0.6);
+}
+
+/* ---------- Timeline ---------- */
 .timeline {
   left: var(--gutter);
   right: var(--gutter);
@@ -125,6 +292,7 @@ html, body {
 }
 .icon-btn:hover { background: #2a78d6; }
 .icon-btn:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+.icon-btn:disabled { opacity: 0.35; cursor: default; }
 .icon-btn .icon-pause { display: none; }
 .icon-btn.playing .icon-play { display: none; }
 .icon-btn.playing .icon-pause { display: inline; }
@@ -137,8 +305,10 @@ html, body {
   white-space: nowrap;
 }
 .lead { font-size: 12px; color: var(--text-secondary); }
+.timeline.static .valid-time { white-space: normal; }
 
 .slider-wrap { grid-area: slider; position: relative; padding-bottom: 14px; }
+.timeline.static .slider-wrap { opacity: 0.35; }
 .progress {
   grid-area: progress;
   font-size: 12px;
@@ -147,7 +317,6 @@ html, body {
   min-width: 90px;
   text-align: right;
 }
-.progress[hidden] { display: none; }
 
 input[type="range"] {
   -webkit-appearance: none;
@@ -158,6 +327,7 @@ input[type="range"] {
   background: transparent;
   cursor: pointer;
 }
+input[type="range"]:disabled { cursor: default; }
 input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
   border-radius: 2px;
@@ -214,7 +384,7 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px 
   background: var(--text-muted);
 }
 
-/* MapLibre controls on the dark theme */
+/* ---------- MapLibre controls on the dark theme ---------- */
 .maplibregl-ctrl-group {
   background: var(--panel-bg) !important;
   border: 1px solid var(--panel-border);
@@ -231,8 +401,39 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px 
 .maplibregl-ctrl-top-right { top: var(--gutter); right: var(--gutter); }
 .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 0 0 10px 0; }
 
-/* Narrow screens: two rows, hide every other day tick */
+/* ---------- Touch: bigger targets ---------- */
+@media (pointer: coarse) {
+  input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -10px; }
+  input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; }
+  .ticks { left: 12px; right: 12px; }
+  .chip span { padding: 7px 12px; }
+}
+
+/* ---------- Mid widths: tighter timeline ---------- */
+@media (max-width: 1000px) {
+  .readout { min-width: 0; }
+  .progress { display: none; }
+}
+
+/* ---------- Narrow screens: collapsible header, bottom sheet, two-row timeline ---------- */
 @media (max-width: 720px) {
+  .brand { padding: 10px 14px; }
+  .brand-toggle { cursor: pointer; }
+  .brand .chevron { display: block; }
+  .brand.collapsed .chevron { transform: rotate(-90deg); }
+  .brand.collapsed .brand-details { display: none; }
+  .hint { display: none; }
+
+  .point {
+    top: auto;
+    left: var(--gutter);
+    right: var(--gutter);
+    width: auto;
+    bottom: calc(var(--timeline-h) + var(--gutter) + 8px);
+    max-height: min(48vh, calc(100vh - var(--timeline-h) - 140px));
+    padding: 10px 14px 10px;
+  }
+
   .timeline {
     grid-template-columns: auto 1fr;
     grid-template-areas:
@@ -241,18 +442,44 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px 
     gap: 8px 12px;
     padding: 12px 14px 18px;
   }
-  .readout { min-width: 0; }
   .valid-time { font-size: 14px; white-space: normal; }
-  .progress { display: none; }
   .tick:nth-child(even) { display: none; }
-  .brand { padding: 12px 14px 10px; }
-  /* map controls move above the timeline so the header never covers the attribution */
+
+  /* map controls sit above the timeline and the sheet, never under the header */
   .maplibregl-ctrl-top-right {
     top: auto;
-    bottom: calc(var(--timeline-h, 130px) + var(--gutter) + 10px);
+    bottom: calc(var(--timeline-h) + var(--point-h) + var(--gutter) + 10px);
   }
   .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 10px 0 0 0; }
 }
 
-/* The hidden attribute must beat .badge { display: inline-block } and friends */
-[hidden] { display: none !important; }
+/* ---------- Short screens (phones in landscape): compact everything ---------- */
+@media (max-height: 520px) {
+  .brand { padding: 8px 12px; }
+  .brand h1 { font-size: 15px; }
+  .brand .meta, .hint, .ticks { display: none; }
+  .layers { margin-top: 8px; }
+  .legend { margin-top: 8px; }
+  .timeline { padding: 8px 14px 10px; }
+  .slider-wrap { padding-bottom: 0; }
+  .point { padding: 8px 12px; }
+  .stats { gap: 6px; }
+  .chart { min-height: 90px; }
+}
+/* short and wide: the location card takes a second column beside the header */
+@media (max-height: 520px) and (min-width: 721px) {
+  .point {
+    top: var(--gutter);
+    left: calc(2 * var(--gutter) + var(--panel-w));
+    width: min(380px, calc(100vw - 3 * var(--gutter) - var(--panel-w)));
+    max-height: calc(100vh - var(--timeline-h) - 3 * var(--gutter));
+  }
+}
+/* short and narrow: keep the sheet, but leave some map visible */
+@media (max-height: 520px) and (max-width: 720px) {
+  .point { max-height: calc(100vh - var(--timeline-h) - 90px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

@@ -11,16 +11,46 @@
     <div id="map" role="application" aria-label="Precipitation forecast map"></div>
 
     <header class="panel brand">
-      <h1>Precipitation forecast</h1>
-      <p class="meta" id="run-info">Loading forecast…</p>
-      <p class="badge warn" id="stale" hidden></p>
-      <p class="badge info" id="fallback" hidden>Showing checked-in sample data</p>
-      <div class="legend" aria-label="Colour scale">
-        <div class="legend-title">Rain in 6 h, mm</div>
-        <div class="legend-bar" id="legend-bar"></div>
-        <div class="legend-labels" id="legend-labels"></div>
+      <button class="brand-toggle" id="brand-toggle" aria-expanded="true" aria-controls="brand-details">
+        <h1>Precipitation forecast</h1>
+        <svg class="chevron" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+      <div class="brand-details" id="brand-details">
+        <p class="meta" id="run-info">Loading forecast…</p>
+        <p class="badge warn" id="stale" hidden></p>
+        <p class="badge info" id="fallback" hidden>Showing checked-in sample data</p>
+        <div class="layers" id="layers" role="radiogroup" aria-label="Map layer"></div>
+        <div class="legend" aria-label="Colour scale">
+          <div class="legend-title" id="legend-title">Rain in 6 h, mm</div>
+          <div class="legend-bar" id="legend-bar"></div>
+          <div class="legend-labels" id="legend-labels"></div>
+        </div>
+        <p class="hint">Tap anywhere on the map for a 15-day outlook</p>
       </div>
     </header>
+
+    <aside class="panel point" id="point" hidden aria-label="Selected location">
+      <div class="point-head">
+        <div class="point-titles">
+          <div class="point-title" id="point-title">—</div>
+          <div class="point-sub" id="point-sub"></div>
+        </div>
+        <button class="close-btn" id="point-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
+      <p class="summary" id="point-summary" aria-live="polite"></p>
+      <div class="stats" id="point-stats"></div>
+      <div class="chart-wrap">
+        <div class="chart" id="point-chart"></div>
+        <div class="tooltip" id="point-tooltip" hidden></div>
+      </div>
+      <p class="chart-hint">6-hourly totals · tap a bar to jump to that time</p>
+    </aside>
 
     <footer class="panel timeline" aria-label="Forecast time">
       <button id="play" class="icon-btn" aria-label="Play" aria-pressed="false">

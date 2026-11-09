@@ -109,7 +109,31 @@ How it works:
   Mercator, inserted beneath the basemap's label layers.
 - `src/timeline.ts` is the slider, play/pause, keyboard shortcuts (space,
   arrows, home, end), the time readout in the viewer's time zone and the
-  day ticks.
+  day ticks. Static layers freeze it and replace the readout.
+- `src/layers.ts` defines the selectable layers from the manifest: 6-hourly
+  rain (animated), rain totals for the next 24 h, 3 days and 10 days, and
+  time until rain (an orange ramp, light for soon and dark for far off).
+  Each layer carries its own lookup table, legend gradient and ticks.
+- `src/point.ts` and `src/narrative.ts` power the location card. A tap on
+  the map reads the same pixel from all 60 frames, draws a 15-day bar chart
+  of 6-hourly totals with hover tooltips, shows totals for the next 24 h,
+  3 days and 15 days, and writes a rule-based sentence such as "Dry until
+  Thursday afternoon, then about 8 mm over 12 hours". Tapping a bar jumps
+  the timeline to that period.
+- `src/state.ts` keeps layer, time and location in the URL hash, so any
+  view can be shared as a link.
+
+Layout is responsive and reflows live on resize, no reload needed:
+
+- Wide screens: header and location card stack in a left column; the map
+  controls sit top-right; the timeline spans the bottom.
+- Under 720 px: the header collapses to its title (tap to expand) when a
+  location is selected, the location card becomes a bottom sheet above the
+  timeline, the timeline wraps to two rows, and the map controls move above
+  the sheet. Panel heights are published as CSS variables by
+  ResizeObservers so nothing overlaps as content changes.
+- Short screens (phones in landscape) drop secondary text and tighten
+  spacing. Coarse pointers get larger slider and chip targets.
 
 The dev server reads the checked-in sample run. The production build reads
 `data/latest.json`, which the pipeline writes in CI, and falls back to the
@@ -151,5 +175,5 @@ Three tiers:
 
 - [x] Day 1: pipeline runs end to end and writes a valid run folder
 - [x] Day 2: map, overlay, time slider and playback
-- [ ] Day 3: point query, layers, legend, mobile layout
+- [x] Day 3: point query, layers, legend, responsive layout
 - [ ] Day 4: CI workflow, GitHub Pages deployment
