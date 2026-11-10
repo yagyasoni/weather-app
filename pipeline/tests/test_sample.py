@@ -66,7 +66,9 @@ def test_interval_frames_decode_to_manifest_maxima_without_saturation(sample):
         a = load_gray(run_dir / f["file"])
         mm = decode(a, vmax)
         assert (a == 255).mean() < 1e-4, f"{f['file']} saturates at the encoding ceiling"
-        assert abs(mm.max() - f["max_mm"]) <= quant_tolerance(f["max_mm"], vmax) + 0.01, f["file"]
+        # max_mm is the true maximum; the PNG clips at the encoding ceiling
+        expected = min(f["max_mm"], vmax)
+        assert abs(mm.max() - expected) <= quant_tolerance(expected, vmax) + 0.01, f["file"]
         # a unit mistake (metres vs mm) moves this by a factor of 1000
         assert 0.05 < mm.mean() < 5.0, f"{f['file']}: global mean {mm.mean():.3f} mm is implausible"
 

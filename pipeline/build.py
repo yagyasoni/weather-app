@@ -45,7 +45,7 @@ WIDTH = 1440                     # Web Mercator world is square
 HEIGHT = 1440
 MAX_LAT = 85.05112878            # Web Mercator latitude limit
 
-VMAX_INTERVAL_MM = 100.0         # encoding ceiling for per-interval rainfall
+VMAX_INTERVAL_MM = 200.0         # encoding ceiling for per-interval rainfall (tropical cyclones exceed 100)
 VMAX_ACC_MM = 500.0              # encoding ceiling for accumulation layers
 ACC_HOURS = [24, 72, 240]        # accumulation layers to publish
 FIRST_RAIN_THRESHOLD_MM = 1.0    # "first rain" layer: first interval above this

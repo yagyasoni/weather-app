@@ -119,7 +119,7 @@ export class PointPanel {
     if (this.series.length === 0) return
     const width = Math.max(this.chartEl.clientWidth, 200)
     const height = 124
-    const m = { top: 10, right: 6, bottom: 22, left: 30 }
+    const m = { top: 14, right: 6, bottom: 22, left: 30 }
     const plotW = width - m.left - m.right
     const plotH = height - m.top - m.bottom
     const n = this.series.length
@@ -155,6 +155,18 @@ export class PointPanel {
       svg.append(bar)
       this.bars.push(bar)
     })
+
+    // "now" marker, so it is clear which bars the summary sentence is about
+    const nowIdx = this.series.findIndex((p) => p.start.getTime() <= nowMs && nowMs < p.end.getTime())
+    if (nowIdx >= 0) {
+      const p = this.series[nowIdx]
+      const frac = (nowMs - p.start.getTime()) / (p.end.getTime() - p.start.getTime())
+      const x = m.left + (nowIdx + frac) * slot
+      svg.append(svgEl('line', { x1: x, x2: x, y1: m.top - 1, y2: m.top + plotH, class: 'now-line' }))
+      const label = svgEl('text', { x: Math.min(Math.max(x, m.left + 10), width - m.right - 10), y: m.top - 3, class: 'axis-label now-label', 'text-anchor': 'middle' })
+      label.textContent = 'now'
+      svg.append(label)
+    }
 
     // day ticks at local midnight
     let lastDay = ''

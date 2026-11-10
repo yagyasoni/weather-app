@@ -276,6 +276,8 @@ html, body {
 .grid { stroke: rgba(255, 255, 255, 0.08); }
 .axis { stroke: rgba(255, 255, 255, 0.28); }
 .axis-label { fill: var(--text-muted); font-size: 10px; }
+.now-line { stroke: var(--text-secondary); stroke-dasharray: 2 2; }
+.now-label { fill: var(--text-secondary); }
 .tooltip {
   position: absolute;
   z-index: 2;
