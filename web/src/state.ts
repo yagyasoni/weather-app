@@ -18,19 +18,30 @@ export function readState(): ViewState {
   }
 }
 
-let pending: number | undefined
+let timer: number | undefined
+let queued: ViewState | null = null
+
+function write(state: ViewState): void {
+  const params = new URLSearchParams()
+  params.set('layer', state.layer)
+  if (state.step !== null) params.set('t', String(state.step))
+  if (state.point) {
+    params.set('lat', state.point.lat.toFixed(2))
+    params.set('lon', state.point.lon.toFixed(2))
+  }
+  history.replaceState(null, '', `#${params.toString()}`)
+}
 
 /** Write the state without adding history entries; coalesces rapid updates. */
 export function writeState(state: ViewState): void {
-  window.clearTimeout(pending)
-  pending = window.setTimeout(() => {
-    const params = new URLSearchParams()
-    params.set('layer', state.layer)
-    if (state.step !== null) params.set('t', String(state.step))
-    if (state.point) {
-      params.set('lat', state.point.lat.toFixed(2))
-      params.set('lon', state.point.lon.toFixed(2))
-    }
-    history.replaceState(null, '', `#${params.toString()}`)
-  }, 150)
+  queued = state
+  window.clearTimeout(timer)
+  timer = window.setTimeout(flushState, 150)
+}
+
+/** Write any queued state now. Call before leaving the page so the URL is current. */
+export function flushState(): void {
+  window.clearTimeout(timer)
+  if (queued) write(queued)
+  queued = null
 }

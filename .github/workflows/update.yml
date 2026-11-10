@@ -73,14 +73,30 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
+      - name: Install web dependencies
+        if: steps.check.outputs.fresh == 'true'
+        working-directory: web
+        run: npm ci
+
+      - name: Unit tests
+        if: steps.check.outputs.fresh == 'true'
+        working-directory: web
+        run: npm test
+
+      # Browser tests exercise code, not data, so they run for code changes only.
+      - name: Browser tests
+        if: steps.check.outputs.fresh == 'true' && github.event_name != 'schedule'
+        working-directory: web
+        run: |
+          npx playwright install --with-deps chromium-headless-shell
+          npm run e2e
+
       - name: Build site
         if: steps.check.outputs.fresh == 'true'
         working-directory: web
         env:
           BASE_PATH: ${{ steps.pages.outputs.base_path }}/
-        run: |
-          npm ci
-          npm run build
+        run: npm run build
 
       - uses: actions/upload-pages-artifact@v5
         if: steps.check.outputs.fresh == 'true'

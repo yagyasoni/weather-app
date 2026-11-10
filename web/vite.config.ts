@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 // GitHub Pages serves the site under /weather-app/. Dev, build and preview all use
 // the same base so asset paths behave identically everywhere. Override with
@@ -6,4 +6,5 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   base: process.env.BASE_PATH ?? '/weather-app/',
   build: { target: 'es2022', chunkSizeWarningLimit: 1200 },
+  test: { include: ['src/**/*.test.ts'] },
 })

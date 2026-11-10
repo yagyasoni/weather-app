@@ -61,6 +61,21 @@ export class PointPanel {
     this.show()
   }
 
+  /** The outlook could not be loaded; offer a retry instead of an endless "Loading". */
+  setError(lat: number, lon: number, onRetry: () => void): void {
+    this.titleEl.textContent = formatLatLon(lat, lon)
+    this.subEl.textContent = ''
+    this.statsEl.replaceChildren()
+    this.chartEl.replaceChildren()
+    this.series = []
+    const retry = document.createElement('button')
+    retry.className = 'retry-btn'
+    retry.textContent = 'Retry'
+    retry.addEventListener('click', onRetry)
+    this.summaryEl.replaceChildren('Could not load the outlook for this location. ', retry)
+    this.show()
+  }
+
   setSeries(lat: number, lon: number, series: SeriesPoint[], now = new Date()): void {
     this.series = series
     this.now = now

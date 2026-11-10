@@ -114,7 +114,8 @@ How it works:
   day ticks. Static layers freeze it and replace the readout.
 - `src/layers.ts` defines the selectable layers from the manifest: 6-hourly
   rain (animated), rain totals for the next 24 h, 3 days and 10 days, and
-  time until rain (an orange ramp, light for soon and dark for far off).
+  time until rain from now (an orange ramp, light for soon and dark for far
+  off), which `src/firstrain.ts` derives from the 6-hourly frames.
   Each layer carries its own lookup table, legend gradient and ticks.
 - `src/point.ts` and `src/narrative.ts` power the location card. A tap on
   the map reads the same pixel from all 60 frames, draws a 15-day bar chart
@@ -169,6 +170,10 @@ Things to know:
   activity. Any push, or re-enabling the workflow in the Actions tab,
   restarts it. Until then the site keeps showing the last run with a
   "this forecast run is N h old" badge.
+- Each deploy replaces the previous run's files. A page left open checks
+  for a newer run every ten minutes and when it regains focus, and offers to
+  load it. If a file from the old run fails to load and a newer run exists,
+  the page reloads onto it, keeping the layer and location.
 - Scheduled runs can start late when GitHub is busy. A new AIFS run usually
   appears on the site within about an hour of ECMWF publishing it.
 
@@ -183,6 +188,9 @@ Things to know:
   1 mm, 1 mm at 80 mm.
 - The model grid is 0.25° (about 28 km), resampled by nearest neighbour.
   Values are grid-cell averages, not point measurements.
+- "Time until rain" is computed in the browser from the 6-hourly frames,
+  measured from the moment you look. The pipeline's `first_rain.png` counts
+  from the start of the model run instead and is not used by the web app.
 - The checked-in sample run under `web/public/data/sample` is a fixed
   snapshot used for development and as a fallback; it goes stale by design.
 - The forecast is a single deterministic AIFS run. There is no ensemble, so
@@ -191,29 +199,46 @@ Things to know:
 ## Tests
 
 ```bash
+# pipeline
 .venv/bin/pip install -r pipeline/requirements-dev.txt
 .venv/bin/pytest              # offline, about a second
 .venv/bin/pytest --live -s    # also hits ECMWF and Open-Meteo, about a minute
+
+# web app
+cd web
+npm test                      # unit tests (Vitest), under a second
+npx playwright install chromium-headless-shell   # once
+npm run e2e                   # browser tests (Playwright), about 15 seconds
 ```
 
-Three tiers:
+Pipeline (`pipeline/tests/`):
 
-- `pipeline/tests/test_functions.py` — unit tests for the pure functions:
-  Mercator row latitudes, warp lookup tables (including the dateline and a
-  0..360 longitude grid), the square-root encoding round trip, unit
-  handling, and run pruning. It also checks that the pixel formula the
-  front end uses lands on the row the pipeline wrote.
-- `pipeline/tests/test_sample.py` — contract checks on the checked-in sample
-  run: manifest fields, 60 frames in order with correct valid times, every
-  PNG 8-bit grayscale at the declared size, decoded maxima matching the
-  manifest, no saturation, plausible global mean (catches unit mistakes),
-  accumulations growing with lead time, and the first-rain layer agreeing
-  with the interval frames.
-- `pipeline/tests/test_live.py` — marked `live`, skipped by default. Builds
-  a fresh 4-step run into a temp folder, then checks 1600 random pixels
-  against the source GRIB within the encoding's quantisation error, and
-  compares 6-hourly totals at the wettest mid-latitude point against
-  Open-Meteo's feed of the same AIFS run.
+- `test_functions.py` — unit tests for the pure functions: Mercator row
+  latitudes, warp lookup tables (including the dateline and a 0..360
+  longitude grid), the square-root encoding round trip, unit handling, and
+  run pruning, including that the run just built is never pruned.
+- `test_sample.py` — contract checks on the checked-in sample run: manifest
+  fields, 60 frames in order with correct valid times, every PNG 8-bit
+  grayscale at the declared size, decoded maxima matching the manifest,
+  plausible global mean (catches unit mistakes), accumulations growing with
+  lead time, and the first-rain layer agreeing with the interval frames.
+- `test_live.py` — marked `live`, skipped by default. Builds a fresh 4-step
+  run, checks 1600 random pixels against the source GRIB within the
+  encoding's quantisation error, and compares 6-hourly totals at the wettest
+  mid-latitude point against Open-Meteo's feed of the same AIFS run.
+
+Web app:
+
+- `web/src/*.test.ts` — unit tests for longitude wrapping and pixel lookup,
+  the time-until-rain calculation, and the timeline's behaviour with fake
+  timers: a failed frame does not stop later frames, pausing and resuming
+  during a slow frame leaves one playback loop, and Space is left to a
+  focused button.
+- `web/e2e/app.spec.ts` — browser tests against the dev server with a fixed
+  clock and no external basemap. They break and delay individual requests to
+  check that a failed frame is retried, a failed location query offers a
+  working retry, a newer run is offered and is loaded automatically when the
+  old files are gone, and quick layer switching never shows a late image.
 
 ## Status
 

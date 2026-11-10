@@ -2,13 +2,16 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './style.css'
 import { ATTRIBUTION, BASEMAP_STYLE, STALE_AFTER_HOURS } from './config'
 import { FrameStore, loadLatest, type Loaded } from './data'
-import { lonLatToPixel } from './geo'
+import { computeFirstRain, type FirstRain } from './firstrain'
+import { lonLatToPixel, wrapLon } from './geo'
 import { buildLayers, type LayerDef } from './layers'
 import type { SeriesPoint } from './narrative'
+import { watchForNewRun } from './newrun'
 import { createMap, RainOverlay } from './overlay'
 import { PointPanel } from './point'
 import { readState, writeState, type ViewState } from './state'
 import { Timeline } from './timeline'
+import { notify } from './ui'
 import { decodeMm, encodeGrey } from './types'
 
 const utcFmt = new Intl.DateTimeFormat('en-GB', {
@@ -130,11 +133,29 @@ async function main(): Promise<void> {
 
   const persist = () => writeState({ layer: layer.id, step: frames[timeline.index]?.step ?? null, point })
 
+  /** Records what the map is showing; read by the browser tests. */
+  const setShown = (name: string) => (document.body.dataset.shown = name)
+
+  const runWatcher = watchForNewRun(root, manifest.run_id)
+  const onLoadError = (err: unknown) => {
+    console.warn('forecast data failed to load:', err)
+    notify('Could not load forecast data. Check your connection and try again.')
+    // the usual cause on a long-open page: a deploy replaced this run's files
+    void runWatcher.check({ reloadIfNewer: true })
+  }
+
   await mapReady
-  const overlay = new RainOverlay(map, width, height, bounds, layer.lut)
+  const overlay = new RainOverlay(map, width, height, bounds)
   overlay.add()
 
-  const timeline = new Timeline(frames, async (i) => overlay.show(await store.grey(frames[i].file)))
+  const timeline = new Timeline(frames, async (i) => {
+    const target = layer
+    const grey = await store.grey(frames[i].file)
+    if (layer !== target || layer.kind !== 'animated') return // the layer changed while this frame loaded
+    overlay.show(grey, layer.lut)
+    setShown(frames[i].file)
+  })
+  timeline.onError = onLoadError
   store.onProgress = (n, total) => timeline.setProgress(n, total)
 
   const panel = new PointPanel({
@@ -147,7 +168,7 @@ async function main(): Promise<void> {
       persist()
     },
     onSelectFrame: (i) => {
-      if (layer.kind === 'static') selectLayer('interval')
+      if (layer.kind !== 'animated') selectLayer('interval')
       timeline.pause()
       void timeline.setIndex(i)
     },
@@ -157,14 +178,44 @@ async function main(): Promise<void> {
     persist()
   }
 
+  // "Time until rain" is relative to now, so it is recomputed when it gets old
+  let firstRain: { at: number; value: FirstRain } | null = null
+  async function getFirstRain(): Promise<FirstRain> {
+    const now = Date.now()
+    if (!firstRain || now - firstRain.at > 10 * 60_000) {
+      const { encoding } = manifest.layers.first_rain
+      firstRain = { at: now, value: await computeFirstRain(store, frames, interval.encoding.vmax, encoding.threshold_mm, now) }
+    }
+    return firstRain.value
+  }
+
+  let applyToken = 0
+  /** Show the selected layer. A newer call wins: a slow load never paints over a later choice. */
   async function applyLayer(): Promise<void> {
-    renderLegend(layer)
-    overlay.setLut(layer.lut)
-    if (layer.kind === 'static' && layer.file) {
-      timeline.setMode('static', layer.readout)
-      overlay.show(await store.grey(layer.file))
-    } else {
-      timeline.setMode('animated')
+    const token = ++applyToken
+    const target = layer
+    renderLegend(target)
+    if (target.kind === 'animated') {
+      timeline.setMode('animated') // re-renders the current frame through the timeline
+      return
+    }
+    try {
+      timeline.setMode('static', target.kind === 'computed' ? { title: target.readout!.title, sub: 'Working it out…' } : target.readout)
+      let grey: Uint8Array
+      let lut = target.lut
+      if (target.kind === 'computed') {
+        const result = await getFirstRain()
+        grey = result.grey
+        lut = target.lutFor!(result.hours)
+      } else {
+        grey = await store.grey(target.file!)
+      }
+      if (token !== applyToken) return
+      overlay.show(grey, lut)
+      timeline.setMode('static', target.readout)
+      setShown(target.file ?? target.id)
+    } catch (err) {
+      if (token === applyToken) onLoadError(err)
     }
   }
 
@@ -177,14 +228,25 @@ async function main(): Promise<void> {
     persist()
   }
 
-  async function selectPoint(lat: number, lon: number): Promise<void> {
+  async function selectPoint(lat: number, rawLon: number): Promise<void> {
+    const lon = wrapLon(rawLon) // clicks on a repeated copy of the world report e.g. 538°
+    const isCurrent = () => point !== null && point.lat === lat && point.lon === lon
     point = { lat, lon }
     overlay.setMarker(lon, lat)
     panel.setLoading(lat, lon)
     persist()
     const { x, y } = lonLatToPixel(lon, lat, width, height)
-    const greys = await store.seriesAt(frames.map((f) => f.file), x, y)
-    if (!point || point.lat !== lat || point.lon !== lon) return // superseded by a newer click
+    let greys: number[]
+    try {
+      greys = await store.seriesAt(frames.map((f) => f.file), x, y)
+    } catch (err) {
+      if (isCurrent()) {
+        panel.setError(lat, lon, () => void selectPoint(lat, lon))
+        onLoadError(err)
+      }
+      return
+    }
+    if (!isCurrent()) return // superseded by a newer click
     const series: SeriesPoint[] = frames.map((f, i) => {
       const end = new Date(f.valid_time)
       return { start: new Date(end.getTime() - f.interval_hours * 3600_000), end, mm: decodeMm(greys[i], interval.encoding.vmax) }

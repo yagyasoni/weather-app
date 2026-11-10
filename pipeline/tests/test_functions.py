@@ -85,6 +85,14 @@ def test_prune_old_runs_keeps_newest_and_ignores_other_dirs(tmp_path):
         ".2026110918.tmp", "2026110906", "2026110912", "sample"]
 
 
+def test_prune_never_removes_the_run_just_built(tmp_path):
+    """Building an older run than the ones on disk must not delete it."""
+    for name in ["2026110900", "2026111006", "2026111012"]:
+        (tmp_path / name).mkdir()
+    build.prune_old_runs(tmp_path, keep=2, protect="2026110900")
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["2026110900", "2026111012"]
+
+
 def test_current_run_id(tmp_path):
     assert build.current_run_id(tmp_path) is None
     (tmp_path / "latest.json").write_text("not json")

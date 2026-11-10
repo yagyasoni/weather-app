@@ -46,7 +46,6 @@ export class RainOverlay {
   private ctx: CanvasRenderingContext2D
   private image: ImageData
   private added = false
-  private lastGrey: Uint8Array | null = null
   private marker: Marker | null = null
 
   constructor(
@@ -54,7 +53,6 @@ export class RainOverlay {
     width: number,
     height: number,
     private bounds: Bounds,
-    private lut: Uint8ClampedArray,
   ) {
     this.canvas = document.createElement('canvas')
     this.canvas.width = width
@@ -84,17 +82,9 @@ export class RainOverlay {
     this.added = true
   }
 
-  /** Swap the colour table (layer change) and repaint the current frame with it. */
-  setLut(lut: Uint8ClampedArray): void {
-    this.lut = lut
-    if (this.lastGrey) this.show(this.lastGrey)
-  }
-
-  /** Colour a frame of grey levels and push it to the map. */
-  show(grey: Uint8Array): void {
-    this.lastGrey = grey
+  /** Colour a frame of grey levels with a lookup table and push it to the map. */
+  show(grey: Uint8Array, lut: Uint8ClampedArray): void {
     const px = this.image.data
-    const lut = this.lut
     for (let i = 0, j = 0; i < grey.length; i++, j += 4) {
       const k = grey[i] * 4
       px[j] = lut[k]

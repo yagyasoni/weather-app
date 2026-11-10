@@ -164,9 +164,13 @@ def current_run_id(out_root: Path) -> str | None:
         return None
 
 
-def prune_old_runs(out_root: Path, keep: int) -> None:
+def prune_old_runs(out_root: Path, keep: int, protect: str | None = None) -> None:
+    """Keep the newest `keep` run folders. `protect` (the run just built) always survives,
+    even when it is older than the others, because latest.json points at it."""
     runs = sorted(d for d in out_root.iterdir() if d.is_dir() and RUN_DIR_RE.match(d.name))
-    for d in runs[:-keep] if keep > 0 else runs:
+    others = [d for d in runs if d.name != protect]
+    slots = keep - 1 if protect and len(others) < len(runs) else keep
+    for d in others[: max(len(others) - slots, 0)] if slots > 0 else others:
         log(f"removing old run {d.name}")
         shutil.rmtree(d)
 
@@ -347,7 +351,7 @@ def main(argv: list[str] | None = None) -> int:
         manifest = build(out_root, run, grib, generated_at)
         log(f"built run {rid} in {time.time() - t0:.0f}s")
 
-    prune_old_runs(out_root, KEEP_RUNS)
+    prune_old_runs(out_root, KEEP_RUNS, protect=rid)
     n_png = len(list((out_root / rid).glob("*.png")))
     size_mb = sum(p.stat().st_size for p in (out_root / rid).iterdir()) / 1e6
     log(f"done: {n_png} PNGs, {size_mb:.1f} MB in {out_root / rid}")

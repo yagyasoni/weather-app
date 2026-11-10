@@ -14,9 +14,11 @@ export interface LayerDef {
   lut: Uint8ClampedArray
   gradient: string
   ticks: LegendTick[]
-  /** animated layers step through the interval frames; static ones show one file */
-  kind: 'animated' | 'static'
+  /** animated: steps through the interval frames; static: one file; computed: derived in the browser */
+  kind: 'animated' | 'static' | 'computed'
   file?: string
+  /** computed layers build their colour table once the hours for each value are known */
+  lutFor?: (hours: number[]) => Uint8ClampedArray
   readout?: { title: string; sub: string }
 }
 
@@ -69,23 +71,26 @@ export function buildLayers(manifest: Manifest): LayerDef[] {
     })
   }
 
-  // hours until the first wet 6-hour period
+  // time from now until the first wet 6-hour period, computed in the browser (see firstrain.ts)
   {
-    const { steps, threshold_mm, none_value } = first_rain.encoding
+    const { steps, threshold_mm } = first_rain.encoding
     const maxHours = steps[steps.length - 1]
     const scale = hoursScale(maxHours)
     layers.push({
       id: 'first_rain',
       label: 'Time to rain',
-      legendTitle: 'Time until rain',
-      lut: buildLut(ORANGE_LIGHT_TO_DARK, scale, (g) => (g === none_value || g > steps.length ? null : steps[g - 1])),
+      legendTitle: 'Time until rain, from now',
+      lut: new Uint8ClampedArray(256 * 4),
+      lutFor: (hours) => buildLut(ORANGE_LIGHT_TO_DARK, scale, (g) => (g === 0 || g > hours.length ? null : hours[g - 1])),
       gradient: gradientCss(ORANGE_LIGHT_TO_DARK, scale),
-      ticks: [6, 24, 72, 168, 360].map((h) => ({ position: scale.position(h), label: hoursLabel(h).replace(' days', ' d').replace(' day', ' d') })),
-      kind: 'static',
-      file: first_rain.file,
+      ticks: [0, 24, 72, 168, maxHours].map((h) => ({
+        position: scale.position(h),
+        label: h === 0 ? 'now' : hoursLabel(h).replace(' days', ' d').replace(' day', ' d'),
+      })),
+      kind: 'computed',
       readout: {
         title: 'Time until rain',
-        sub: `first 6-hour period with more than ${threshold_mm} mm; clear where none is expected`,
+        sub: `from now to the first 6-hour period with more than ${threshold_mm} mm; clear where none is expected`,
       },
     })
   }

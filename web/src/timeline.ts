@@ -17,6 +17,9 @@ export class Timeline {
   playing = false
   /** Called whenever the index changes, before the frame is rendered. */
   onChange: ((index: number) => void) | null = null
+  /** Called when a frame fails to render; later frames are unaffected. */
+  onError: ((err: unknown) => void) | null = null
+  private playToken = 0
   private mode: 'animated' | 'static' = 'animated'
   private timer: number | undefined
   private rendering: Promise<void> = Promise.resolve()
@@ -53,7 +56,11 @@ export class Timeline {
     this.renderReadout()
     this.rendering = this.rendering.then(async () => {
       if (this.index !== clamped) return // superseded
-      await this.show(clamped)
+      try {
+        await this.show(clamped)
+      } catch (err) {
+        this.onError?.(err) // keep the chain alive so the next frame can still render
+      }
     })
     return this.rendering
   }
@@ -85,10 +92,14 @@ export class Timeline {
     this.playBtn.classList.add('playing')
     this.playBtn.setAttribute('aria-pressed', 'true')
     this.playBtn.setAttribute('aria-label', 'Pause')
+    // Each play() gets a token; a tick that was mid-load when playback was paused and
+    // restarted sees a stale token and stops, so only one chain ever advances frames.
+    const token = ++this.playToken
+    const live = () => this.playing && token === this.playToken
     const tick = async () => {
-      if (!this.playing) return
+      if (!live()) return
       await this.setIndex((this.index + 1) % this.frames.length)
-      if (this.playing) this.timer = window.setTimeout(tick, PLAYBACK_MS)
+      if (live()) this.timer = window.setTimeout(tick, PLAYBACK_MS)
     }
     this.timer = window.setTimeout(tick, PLAYBACK_MS)
   }
@@ -96,6 +107,7 @@ export class Timeline {
   pause(): void {
     if (!this.playing) return
     this.playing = false
+    this.playToken++
     window.clearTimeout(this.timer)
     this.playBtn.classList.remove('playing')
     this.playBtn.setAttribute('aria-pressed', 'false')
@@ -120,6 +132,8 @@ export class Timeline {
     const target = e.target as HTMLElement | null
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return
     if (this.mode === 'static') return
+    // a focused button handles Space itself; acting here too would toggle twice
+    if (e.key === ' ' && target?.tagName === 'BUTTON') return
     switch (e.key) {
       case ' ':
         e.preventDefault()

@@ -18,14 +18,18 @@ async function fetchJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+/** The pointer file for a data root, cache-busted so a new run shows up without a hard reload. */
+export function fetchLatest(root: string): Promise<Latest> {
+  return fetchJson<Latest>(siteUrl(`${root}/latest.json?t=${Date.now()}`))
+}
+
 /** Load latest.json and the manifest it points at, falling back to the sample run. */
 export async function loadLatest(): Promise<Loaded> {
   const roots = DATA_ROOT === FALLBACK_DATA_ROOT ? [DATA_ROOT] : [DATA_ROOT, FALLBACK_DATA_ROOT]
   let lastError: unknown
   for (const root of roots) {
     try {
-      // cache-bust latest.json so a new run shows up without a hard reload
-      const latest = await fetchJson<Latest>(siteUrl(`${root}/latest.json?t=${Date.now()}`))
+      const latest = await fetchLatest(root)
       const manifest = await fetchJson<Manifest>(siteUrl(`${root}/${latest.manifest}`))
       return { root, latest, manifest, usingFallback: root !== DATA_ROOT }
     } catch (err) {
@@ -146,6 +150,7 @@ export class FrameStore {
           if (import.meta.env.DEV) this.selfCheck(file, out)
           return out
         })
+      p.catch(() => this.inflight.delete(file)) // a failed frame must stay retryable
       this.inflight.set(file, p)
     }
     return p

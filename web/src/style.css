@@ -306,6 +306,37 @@ html, body {
   box-shadow: 0 0 0 2px var(--accent-strong), 0 0 12px rgba(134, 182, 239, 0.6);
 }
 
+/* ---------- Toast and inline retry ---------- */
+.toast {
+  position: fixed;
+  z-index: 20;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--timeline-h) + max(var(--gutter), env(safe-area-inset-bottom)) + var(--gutter));
+  max-width: calc(100vw - 2 * var(--gutter));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: #1a1d23;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+.toast button, .retry-btn {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.toast button:focus-visible, .retry-btn:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+
 /* ---------- Timeline ---------- */
 .timeline {
   left: var(--gutter);
