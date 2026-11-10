@@ -10,9 +10,6 @@ import numpy as np
 import build
 from helpers import decode, load_gray, quant_tolerance
 
-N_PIXELS = 3000
-SEED = 1   # fixed seed: the same random pixels are checked on every run
-
 
 def parse(ts: str) -> datetime:
     return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
@@ -53,7 +50,7 @@ def test_interval_frames_cover_forecast_in_order(sample):
 def test_every_png_is_8bit_grayscale_of_declared_size(sample):
     _, run_dir, m = sample
     pngs = sorted(run_dir.glob("*.png"))
-    assert len(pngs) == len(build.STEPS) + len(build.ACC_HOURS) + 1
+    assert len(pngs) == len(build.STEPS) + len(build.ACC_HOURS)
     for png in pngs:
         assert load_gray(png).shape == (m["image"]["height"], m["image"]["width"]), png.name
 
@@ -85,31 +82,3 @@ def test_accumulation_layers_grow_with_lead_time(sample):
     first = decode(load_gray(run_dir / first_interval["file"]), m["layers"]["interval"]["encoding"]["vmax"])
     # 24 h accumulation must contain the first 6 h everywhere, allowing for quantisation
     assert np.mean(accs[0] + 1.0 >= first) > 0.999
-
-
-def test_first_rain_layer_agrees_with_interval_frames(sample):
-    _, run_dir, m = sample
-    enc = m["layers"]["first_rain"]["encoding"]
-    frames = m["layers"]["interval"]["frames"]
-    vmax = m["layers"]["interval"]["encoding"]["vmax"]
-    thr = enc["threshold_mm"]
-    assert enc["none_value"] == 0
-    assert enc["steps"] == [f["step"] for f in frames]
-
-    first = load_gray(run_dir / m["layers"]["first_rain"]["file"])
-    assert first.max() <= len(frames)
-
-    rng = np.random.default_rng(SEED)
-    ys = rng.integers(0, first.shape[0], N_PIXELS)
-    xs = rng.integers(0, first.shape[1], N_PIXELS)
-    idx = first[ys, xs].astype(int)
-    stack = np.stack([decode(load_gray(run_dir / f["file"])[ys, xs], vmax) for f in frames])
-
-    slack = 0.1  # quantisation near 1 mm is about 0.04 mm
-    for p in range(len(ys)):
-        k = idx[p]
-        if k == 0:
-            assert np.all(stack[:, p] <= thr + slack), f"pixel {p}: rain but first_rain says none"
-        else:
-            assert stack[k - 1, p] >= thr - slack, f"pixel {p}: first_rain points at a dry interval"
-            assert np.all(stack[: k - 1, p] <= thr + slack), f"pixel {p}: rain before first_rain"

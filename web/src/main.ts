@@ -5,7 +5,7 @@ import { FrameStore, loadLatest, type Loaded } from './data'
 import { computeFirstRain, type FirstRain } from './firstrain'
 import { lonLatToPixel, wrapLon } from './geo'
 import { buildLayers, type LayerDef } from './layers'
-import type { SeriesPoint } from './narrative'
+import { WET_MM, type SeriesPoint } from './narrative'
 import { watchForNewRun } from './newrun'
 import { createMap, RainOverlay } from './overlay'
 import { PointPanel } from './point'
@@ -183,8 +183,7 @@ async function main(): Promise<void> {
   async function getFirstRain(): Promise<FirstRain> {
     const now = Date.now()
     if (!firstRain || now - firstRain.at > 10 * 60_000) {
-      const { encoding } = manifest.layers.first_rain
-      firstRain = { at: now, value: await computeFirstRain(store, frames, interval.encoding.vmax, encoding.threshold_mm, now) }
+      firstRain = { at: now, value: await computeFirstRain(store, frames, interval.encoding.vmax, WET_MM, now) }
     }
     return firstRain.value
   }

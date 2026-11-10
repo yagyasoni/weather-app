@@ -1,14 +1,33 @@
-# Precipitation Forecast App
+# Precipitation Forecast
 
-A web application that shows the latest ECMWF precipitation forecast on an
-interactive map. Built for the QUEST Lab Full Stack AI pre-doctoral
+**Live: https://yagyasoni.github.io/weather-app/**
+
+A 15-day global rain forecast you can read in one tap. It fetches the latest
+ECMWF AIFS run, turns it into small image files, and serves an interactive
+map with no backend. Built for the QUEST Lab Full Stack AI pre-doctoral
 application (Project 1).
 
-**Live site: https://yagyasoni.github.io/weather-app/**
+![The app on a desktop browser: a world rain map, a location card with a 15-day bar chart, and a timeline](docs/screenshot-desktop.jpg)
 
-Forecast data comes from [ECMWF Open Data](https://www.ecmwf.int/en/forecasts/datasets/open-data)
+What it does:
+
+- **Tap anywhere for a plain-language outlook.** "Dry until Wed 18 Nov, then
+  about 138 mm over 7 days", with totals and a 15-day chart of 6-hourly rain.
+- **Play the forecast.** An animated map of 6-hourly rain, with totals for
+  1, 3 and 10 days and a "time until rain, from now" layer.
+- **Share any view.** Layer, time and location live in the URL.
+- **Stays current by itself.** A scheduled job publishes each new run within
+  about an hour, and an open page moves onto it.
+- **Works on a phone.** The layout reflows from wide desktop to a bottom
+  sheet on small screens.
+
+<img src="docs/screenshot-phone.jpg" alt="The app on a phone: collapsed header, location sheet and two-row timeline" width="280">
+
+The reasoning behind the main choices is in [docs/DESIGN.md](docs/DESIGN.md).
+
+Forecast data: [ECMWF Open Data](https://www.ecmwf.int/en/forecasts/datasets/open-data)
 (AIFS Single, 0.25°, 6-hourly to 360 h), licensed
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Code: MIT.
 
 ## Architecture
 
@@ -64,8 +83,8 @@ What the script does for one run:
    numerical noise.
 4. Warps every field to Web Mercator with a nearest-neighbour lookup table,
    so it can be draped on a web map without distortion.
-5. Writes one PNG per 6-hour interval, accumulation PNGs at 24, 72 and
-   240 h, and a "hours until first rain" PNG.
+5. Writes one PNG per 6-hour interval and accumulation PNGs at 24, 72 and
+   240 h.
 6. Writes `manifest.json` (steps, valid times, encoding constants, bounds,
    attribution) and updates `latest.json`. Keeps the two newest runs.
 
@@ -78,7 +97,6 @@ web/public/data/
     manifest.json
     tp_006.png … tp_360.png
     acc_024.png  acc_072.png  acc_240.png
-    first_rain.png
 ```
 
 `web/public/data/sample/` is one real run checked into the repo so the
@@ -189,8 +207,8 @@ Things to know:
 - The model grid is 0.25° (about 28 km), resampled by nearest neighbour.
   Values are grid-cell averages, not point measurements.
 - "Time until rain" is computed in the browser from the 6-hourly frames,
-  measured from the moment you look. The pipeline's `first_rain.png` counts
-  from the start of the model run instead and is not used by the web app.
+  measured from the moment you look, so it needs all 60 frames decoded once
+  (a second or two) the first time the layer is opened.
 - The checked-in sample run under `web/public/data/sample` is a fixed
   snapshot used for development and as a fallback; it goes stale by design.
 - The forecast is a single deterministic AIFS run. There is no ensemble, so
@@ -220,8 +238,8 @@ Pipeline (`pipeline/tests/`):
 - `test_sample.py` — contract checks on the checked-in sample run: manifest
   fields, 60 frames in order with correct valid times, every PNG 8-bit
   grayscale at the declared size, decoded maxima matching the manifest,
-  plausible global mean (catches unit mistakes), accumulations growing with
-  lead time, and the first-rain layer agreeing with the interval frames.
+  plausible global mean (catches unit mistakes), and accumulations growing
+  with lead time.
 - `test_live.py` — marked `live`, skipped by default. Builds a fresh 4-step
   run, checks 1600 random pixels against the source GRIB within the
   encoding's quantisation error, and compares 6-hourly totals at the wettest
@@ -239,10 +257,3 @@ Web app:
   check that a failed frame is retried, a failed location query offers a
   working retry, a newer run is offered and is loaded automatically when the
   old files are gone, and quick layer switching never shows a late image.
-
-## Status
-
-- [x] Day 1: pipeline runs end to end and writes a valid run folder
-- [x] Day 2: map, overlay, time slider and playback
-- [x] Day 3: point query, layers, legend, responsive layout
-- [x] Day 4: CI workflow, GitHub Pages deployment

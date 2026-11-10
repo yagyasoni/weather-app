@@ -49,7 +49,6 @@ MAX_LAT = 85.05112878            # Web Mercator latitude limit
 VMAX_INTERVAL_MM = 200.0         # encoding ceiling for per-interval rainfall (tropical cyclones exceed 100)
 VMAX_ACC_MM = 500.0              # encoding ceiling for accumulation layers
 ACC_HOURS = [24, 72, 240]        # accumulation layers to publish
-FIRST_RAIN_THRESHOLD_MM = 1.0    # "first rain" layer: first interval above this
 
 KEEP_RUNS = 2                    # run folders to retain in the output root
 ATTRIBUTION = "Forecast data: ECMWF Open Data, licensed CC BY 4.0"
@@ -200,7 +199,6 @@ def build(out_root: Path, run: datetime, grib: Path, generated_at: datetime) -> 
 
     prev_acc = np.zeros((lat.size, lon.size), dtype=np.float32)
     prev_h = 0
-    first_idx = np.zeros((lat.size, lon.size), dtype=np.uint8)
     frames: list[dict] = []
     acc_frames: list[dict] = []
 
@@ -209,9 +207,6 @@ def build(out_root: Path, run: datetime, grib: Path, generated_at: datetime) -> 
         raw = da.isel(step=i).values.astype(np.float32)
         acc_mm = np.clip(np.nan_to_num(raw, nan=0.0), 0.0, None) * np.float32(scale)
         inc_mm = np.clip(acc_mm - prev_acc, 0.0, None)
-
-        newly_wet = (first_idx == 0) & (inc_mm > FIRST_RAIN_THRESHOLD_MM)
-        first_idx[newly_wet] = i + 1
 
         fname = f"tp_{h:03d}.png"
         write_png(encode_sqrt(warp(inc_mm, rows, cols), VMAX_INTERVAL_MM), tmp_dir / fname)
@@ -236,8 +231,6 @@ def build(out_root: Path, run: datetime, grib: Path, generated_at: datetime) -> 
         prev_acc, prev_h = acc_mm, h
         if (i + 1) % 10 == 0 or i + 1 == step_hours.size:
             log(f"  wrote {i + 1}/{step_hours.size} frames")
-
-    write_png(warp(first_idx, rows, cols), tmp_dir / "first_rain.png")
 
     manifest = {
         "model": MODEL,
@@ -266,14 +259,6 @@ def build(out_root: Path, run: datetime, grib: Path, generated_at: datetime) -> 
                 "encoding": {"type": "sqrt", "vmax": VMAX_ACC_MM, "units": "mm",
                              "decode": "mm = (g / 255)^2 * vmax"},
                 "frames": acc_frames,
-            },
-            "first_rain": {
-                "description": f"Index of the first interval with more than "
-                               f"{FIRST_RAIN_THRESHOLD_MM:g} mm; 0 means none within the forecast",
-                "encoding": {"type": "index", "threshold_mm": FIRST_RAIN_THRESHOLD_MM,
-                             "none_value": 0, "steps": [int(h) for h in step_hours],
-                             "decode": "hours = steps[g - 1] when g > 0"},
-                "file": "first_rain.png",
             },
         },
         "attribution": ATTRIBUTION,

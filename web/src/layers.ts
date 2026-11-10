@@ -1,4 +1,5 @@
 import { BLUE_DARK_TO_LIGHT, buildLut, gradientCss, hoursScale, ORANGE_LIGHT_TO_DARK, rainScale } from './colormap'
+import { WET_MM } from './narrative'
 import type { Manifest } from './types'
 import { decodeMm } from './types'
 
@@ -34,7 +35,7 @@ function hoursLabel(h: number): string {
 
 export function buildLayers(manifest: Manifest): LayerDef[] {
   const layers: LayerDef[] = []
-  const { interval, accumulation, first_rain } = manifest.layers
+  const { interval, accumulation } = manifest.layers
 
   // 6-hourly rain, animated along the timeline
   {
@@ -73,8 +74,7 @@ export function buildLayers(manifest: Manifest): LayerDef[] {
 
   // time from now until the first wet 6-hour period, computed in the browser (see firstrain.ts)
   {
-    const { steps, threshold_mm } = first_rain.encoding
-    const maxHours = steps[steps.length - 1]
+    const maxHours = interval.frames[interval.frames.length - 1].step
     const scale = hoursScale(maxHours)
     layers.push({
       id: 'first_rain',
@@ -90,7 +90,7 @@ export function buildLayers(manifest: Manifest): LayerDef[] {
       kind: 'computed',
       readout: {
         title: 'Time until rain',
-        sub: `from now to the first 6-hour period with more than ${threshold_mm} mm; clear where none is expected`,
+        sub: `from now to the first 6-hour period with more than ${WET_MM} mm; clear where none is expected`,
       },
     })
   }

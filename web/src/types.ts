@@ -47,11 +47,6 @@ export interface Manifest {
   layers: {
     interval: { description: string; encoding: SqrtEncoding; frames: IntervalFrame[] }
     accumulation: { description: string; encoding: SqrtEncoding; frames: AccumulationFrame[] }
-    first_rain: {
-      description: string
-      encoding: { type: 'index'; threshold_mm: number; none_value: number; steps: number[]; decode: string }
-      file: string
-    }
   }
   attribution: string
   license_url: string
