@@ -1,0 +1,99 @@
+name: Update forecast and deploy
+
+# Runs hourly. ECMWF publishes a new AIFS run every 6 hours; most hourly runs find
+# nothing new and stop after a few seconds. Pushes to main always rebuild and deploy.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  push:
+    branches: [main]
+    paths: ["pipeline/**", "web/**", ".github/workflows/update.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      fresh: ${{ steps.check.outputs.fresh }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pipeline/requirements-dev.txt
+
+      - name: Install pipeline dependencies
+        run: pip install -r pipeline/requirements-dev.txt
+
+      - id: pages
+        uses: actions/configure-pages@v6
+
+      # Scheduled runs skip everything when the deployed site already shows the
+      # latest ECMWF run. Any failure to compare counts as "new run", so we rebuild.
+      - id: check
+        name: Is there a new forecast run?
+        env:
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
+        run: |
+          latest=$(python pipeline/build.py --print-latest | tail -n1 || true)
+          deployed=$(curl -fsS "$SITE_URL/data/latest.json?t=$(date +%s)" | python -c "import json,sys; print(json.load(sys.stdin)['run_id'])" || true)
+          echo "latest on ECMWF: ${latest:-unknown}; deployed: ${deployed:-none}"
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -n "$latest" ] && [ "$latest" = "$deployed" ]; then
+            echo "fresh=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Test
+        if: steps.check.outputs.fresh == 'true'
+        run: pytest -q
+
+      - name: Build forecast data
+        if: steps.check.outputs.fresh == 'true'
+        run: |
+          python pipeline/build.py --out web/public/data \
+            || python pipeline/build.py --out web/public/data --source aws
+
+      - uses: actions/setup-node@v7
+        if: steps.check.outputs.fresh == 'true'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build site
+        if: steps.check.outputs.fresh == 'true'
+        working-directory: web
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/upload-pages-artifact@v5
+        if: steps.check.outputs.fresh == 'true'
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.fresh == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

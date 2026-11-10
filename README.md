@@ -4,6 +4,8 @@ A web application that shows the latest ECMWF precipitation forecast on an
 interactive map. Built for the QUEST Lab Full Stack AI pre-doctoral
 application (Project 1).
 
+**Live site: https://yagyasoni.github.io/weather-app/**
+
 Forecast data comes from [ECMWF Open Data](https://www.ecmwf.int/en/forecasts/datasets/open-data)
 (AIFS Single, 0.25°, 6-hourly to 360 h), licensed
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
@@ -147,6 +149,45 @@ a host that serves it at the root.
 Basemap: Carto Dark Matter vector tiles (no API key). Data attribution to
 ECMWF is shown in the map's attribution control as the licence requires.
 
+## Deployment
+
+`.github/workflows/update.yml` runs on every push to `main` that touches the
+pipeline, the web app or the workflow, on manual dispatch, and hourly at 17
+minutes past.
+
+1. It asks ECMWF for the latest fully published run and reads the run id
+   the live site is showing. A scheduled run stops here when the two match,
+   so most hourly runs take a few seconds.
+2. Otherwise it runs the offline tests, builds the forecast data (falling
+   back to the AWS mirror if the ECMWF portal fails), builds the site and
+   deploys it to GitHub Pages as an artifact. Forecast PNGs never enter git
+   history.
+
+Things to know:
+
+- GitHub disables scheduled workflows after 60 days without repository
+  activity. Any push, or re-enabling the workflow in the Actions tab,
+  restarts it. Until then the site keeps showing the last run with a
+  "this forecast run is N h old" badge.
+- Scheduled runs can start late when GitHub is busy. A new AIFS run usually
+  appears on the site within about an hour of ECMWF publishing it.
+
+## Known limits
+
+- Rain values are stored in 8 bits with a ceiling. A 6-hour total above
+  200 mm, or an accumulation above 500 mm, is clipped to the ceiling on the
+  map and in the location chart. The manifest's `max_mm` keeps the true
+  maximum per frame. Both ceilings are constants at the top of
+  `pipeline/build.py`; raising them costs precision for light rain.
+- Precision follows a square-root curve: about 0.03 mm near zero, 0.1 mm at
+  1 mm, 1 mm at 80 mm.
+- The model grid is 0.25° (about 28 km), resampled by nearest neighbour.
+  Values are grid-cell averages, not point measurements.
+- The checked-in sample run under `web/public/data/sample` is a fixed
+  snapshot used for development and as a fallback; it goes stale by design.
+- The forecast is a single deterministic AIFS run. There is no ensemble, so
+  the app shows no uncertainty.
+
 ## Tests
 
 ```bash
@@ -179,4 +220,4 @@ Three tiers:
 - [x] Day 1: pipeline runs end to end and writes a valid run folder
 - [x] Day 2: map, overlay, time slider and playback
 - [x] Day 3: point query, layers, legend, responsive layout
-- [ ] Day 4: CI workflow, GitHub Pages deployment
+- [x] Day 4: CI workflow, GitHub Pages deployment

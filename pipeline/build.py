@@ -15,6 +15,7 @@ Usage:
   python pipeline/build.py --out web/public/data/sample --force
   python pipeline/build.py --date 20261109 --time 0
   python pipeline/build.py --max-steps 3            # quick smoke test
+  python pipeline/build.py --print-latest           # which run would be built
 """
 from __future__ import annotations
 
@@ -303,6 +304,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-steps", type=int, help="only process the first N steps (smoke test)")
     ap.add_argument("--force", action="store_true", help="rebuild even if this run already exists")
     ap.add_argument("--keep-grib", type=Path, help="keep the downloaded GRIB at this path")
+    ap.add_argument("--print-latest", action="store_true",
+                    help="print the id of the latest fully published run as the last line and exit")
     args = ap.parse_args(argv)
 
     MODEL, SOURCE = args.model, args.source
@@ -321,6 +324,10 @@ def main(argv: list[str] | None = None) -> int:
         log(f"looking up latest {MODEL} run on {SOURCE} with {len(steps)} steps of {PARAM}")
         run = find_latest_run(client, request)
         log(f"latest available run: {iso(run)}")
+
+    if args.print_latest:
+        print(run.strftime("%Y%m%d%H"))
+        return 0
 
     out_root: Path = args.out
     out_root.mkdir(parents=True, exist_ok=True)
