@@ -68,7 +68,7 @@ function renderLayerChips(layers: LayerDef[], activeId: string, onChange: (id: s
   }
 }
 
-/** Publish panel heights as CSS variables so the layout can flow around them. */
+/** Publish a panel's height as a CSS variable so the layout can flow around it. */
 function trackHeight(selector: string, cssVar: string): void {
   const panel = document.querySelector<HTMLElement>(selector)
   if (!panel) return
@@ -107,8 +107,6 @@ function showError(err: unknown): void {
 
 async function main(): Promise<void> {
   trackHeight('.timeline', '--timeline-h')
-  trackHeight('.brand', '--header-h')
-  trackHeight('.point', '--point-h')
   const collapseHeader = setupHeaderToggle()
 
   const map = createMap('map', BASEMAP_STYLE, ATTRIBUTION)

@@ -123,21 +123,20 @@ How it works:
 - `src/state.ts` keeps layer, time and location in the URL hash, so any
   view can be shared as a link.
 
-Layout is responsive and reflows live on resize, no reload needed:
+Layout is responsive and reflows live on resize, no reload needed. The
+header and the location card share one flex container (`.dock`) that spans
+from the top of the window to just above the timeline, so they are placed by
+flow and cannot overlap; the card shrinks and scrolls before the header does.
 
-- Wide screens: header and location card stack in a left column; the map
-  controls sit top-right; the timeline spans the bottom. When the window is
-  too short for the stack but at least 760 px wide, the card moves into a
-  second column beside the header instead of scrolling.
+- Wide and tall: header and card stack in a left column.
+- Wide but under 820 px tall: they sit side by side, stopping short of the
+  map buttons in the top-right corner.
+- Up to 720 px wide: the header sits at the top beside the map buttons and
+  collapses to its title when a location is open, the card becomes a bottom
+  sheet above the timeline, and the timeline wraps to two rows.
+- Short screens drop secondary text; coarse pointers get larger targets.
 - The day labels under the slider measure themselves and hide whichever
-  would collide at the current width, so they never overlap.
-- Under 720 px: the header collapses to its title (tap to expand) when a
-  location is selected, the location card becomes a bottom sheet above the
-  timeline, the timeline wraps to two rows, and the map controls move above
-  the sheet. Panel heights are published as CSS variables by
-  ResizeObservers so nothing overlaps as content changes.
-- Short screens (phones in landscape) drop secondary text and tighten
-  spacing. Coarse pointers get larger slider and chip targets.
+  would collide at the current width.
 
 The dev server reads the checked-in sample run. The production build reads
 `data/latest.json`, which the pipeline writes in CI, and falls back to the
