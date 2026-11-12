@@ -16,8 +16,8 @@ What it does:
 - **Play the forecast.** An animated map of 6-hourly rain, with totals for
   1, 3 and 10 days and a "time until rain, from now" layer.
 - **Share any view.** Layer, time and location live in the URL.
-- **Stays current by itself.** A scheduled job publishes each new run within
-  about an hour, and an open page moves onto it.
+- **Stays current by itself.** A scheduled job publishes new runs as they
+  appear, and an open page moves onto the newer one.
 - **Works on a phone.** The layout reflows from wide desktop to a bottom
   sheet on small screens.
 
@@ -192,8 +192,10 @@ Things to know:
   for a newer run every ten minutes and when it regains focus, and offers to
   load it. If a file from the old run fails to load and a newer run exists,
   the page reloads onto it, keeping the layer and location.
-- Scheduled runs can start late when GitHub is busy. A new AIFS run usually
-  appears on the site within about an hour of ECMWF publishing it.
+- GitHub does not guarantee schedule timing. In practice the hourly job
+  fires every 7 to 9 hours on this repository, so the site can be one run
+  behind ECMWF. The page shows a badge only when its run is more than 18
+  hours old.
 
 ## Known limits
 
